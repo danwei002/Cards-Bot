@@ -7,12 +7,14 @@ import discord
 from discord.ext import commands
 import discord.ext.commands
 from discord.ext.commands import Bot, has_permissions, CheckFailure
+from discord.ext.tasks import loop
 from discord.ext import tasks
 import json
 import sys
 import io
 from timeit import default_timer as timer
 from PIL import Image, ImageDraw, ImageColor
+
 
 BOT_PREFIX = "%"
 TOKEN = ""
@@ -30,12 +32,14 @@ gameType = {"5card": 0}
 currentGame = ""
 gameStarted = False
 gameUnderway = False
+gameChannelID = None
 
 
 @client.event
 async def on_ready():
     dumpData()
     loadData()
+    gameLoop.start()
     print("Now online.")
 
 
@@ -162,6 +166,11 @@ def gameDraw(user: discord.Member, numDraws: int):
         tempDeck.remove(selectCard)
 
 
+def endGame():
+    global gameStarted
+    gameStarted = False
+
+
 def showHand(user: discord.Member):
     loadData()
 
@@ -217,6 +226,11 @@ def sortHand(user: discord.Member):
                 aliases=['rc'],
                 pass_context=True)
 async def randcard(ctx):
+    loadData()
+    if gameStarted and str(ctx.author.id) in players:
+        await ctx.send("This command is not available while you are in a game.")
+        return
+
     card = drawCard(ctx.author)
     card.save('drawn.png', format='PNG')
     file = discord.File(open('drawn.png', 'rb'))
@@ -230,6 +244,11 @@ async def randcard(ctx):
     pass_context=True)
 async def draw(ctx, cards: int = 1):
     loadData()
+
+    if gameStarted and str(ctx.author.id) in players:
+        await ctx.send("This command is not available while you are in a game.")
+        return
+
     global tempDeck
     if cards > len(tempDeck):
         await ctx.send("Not enough cards left in the deck.")
@@ -246,6 +265,7 @@ async def draw(ctx, cards: int = 1):
                 brief="View how many cards are left in the deck",
                 pass_context=True)
 async def deck(ctx):
+    global tempDeck
     if len(tempDeck) == 1:
         await ctx.send("There is " + str(len(tempDeck)) + " card left in the deck.")
     else:
@@ -285,16 +305,16 @@ async def hand(ctx):
     userHand = hands[str(user.id)]
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-    hand = Image.new("RGB", (maxWidth, 125), ImageColor.getrgb("#078528"))
+    HAND = Image.new("RGB", (maxWidth, 125), ImageColor.getrgb("#078528"))
 
     for i in range(0, numCards):
         card = Image.open(userHand[i])
         card = card.resize((69, 105))
-        hand.paste(card, (10 + int(cardWidth / 3) * i, 10))
+        HAND.paste(card, (10 + int(cardWidth / 3) * i, 10))
 
-    hand.save('hand.png', format='PNG')
+    HAND.save('hand.png', format='PNG')
     file = discord.File(open('hand.png', 'rb'))
-    await ctx.send(ctx.author.mention, file=file)
+    await ctx.author.send(ctx.author.mention, file=file)
 
 
 @client.command(description="Set sorting type. Use 'p' for president-style sorting (3 low, 2 high), 'd' for default sorting (A low, K high), 's' for suit sorting (diamonds - spades).",
@@ -327,16 +347,42 @@ async def setSort(ctx, sortType: str = None):
                 brief="Start a game",
                 aliases=['5card'],
                 pass_context=True)
-async def game(ctx, TYPE: str):
-    global currentGame, gameStarted, tempDeck, deck
-    TYPE = TYPE.upper()
+async def game(ctx):
+    global currentGame, gameStarted, tempDeck, deck, gameChannelID
     if gameStarted:
         await ctx.send("There is another game underway.")
         return
-    currentGame = TYPE
-    gameStarted = True
-    tempDeck = deck
-    await ctx.send("Game type: **" + currentGame.upper() + "**")
+
+    emoji1 = '1️⃣'
+    emoji2 = '2️⃣'
+    msg = await ctx.send("**           CHOOSE GAME**\n**-------------------------------**\n**REACT WITH:\n" + emoji1 + " - Texas Hold 'Em**\n" + emoji2 + "** - Five-Card Draw**\n**-------------------------------**\n")
+
+    await msg.add_reaction(emoji1)
+    await msg.add_reaction(emoji2)
+
+    rxn = None
+
+    def check(reaction, user):
+        global rxn
+        rxn = reaction
+        return not user.bot
+
+    try:
+        rxn = await client.wait_for('reaction_add', timeout=50.0, check=check)
+    except asyncio.TimeoutError:
+        await ctx.send("Nobody chose in time.")
+        return
+    else:
+        if str(rxn[0].emoji) == emoji1:
+            currentGame = "POKER"
+            await ctx.send("Texas Hold 'Em selected.")
+        elif str(rxn[0].emoji) == emoji2:
+            currentGame = "5CARD"
+            await ctx.send("Five-Card Draw selected.")
+
+        gameStarted = True
+        gameChannelID = ctx.channel.id
+        tempDeck = deck
 
 
 @client.command(description="Join a game that is not yet underway.",
@@ -354,6 +400,7 @@ async def join(ctx):
             players.append(str(ctx.author.id))
     else:
         await ctx.send("A game is already underway.")
+    dumpData()
 
 
 @client.command(description="Start the game.",
@@ -395,42 +442,10 @@ async def start(ctx):
     gameUnderway = True
 
     if currentGame == "POKER":
+        hands.update({"716357127739801711": []})
         for ID in players:
             user = client.get_user(int(ID))
             gameDraw(user, 2)
-
-
-@client.command(description="Deal next card in Poker",
-                brief="Deal next card in Poker",
-                pass_context=True)
-async def dealNext(ctx):
-    if not gameStarted:
-        await ctx.send("No game is active.")
-        return
-
-    if not gameUnderway:
-        await ctx.send("The game is not yet underway.")
-        return
-
-    if players.count(str(ctx.author.id)) <= 0:
-        await ctx.send("You are not in this game.")
-        return
-
-    if currentGame != "POKER":
-        await ctx.send("This command is only for POKER games.")
-        return
-
-    me = client.get_user(716357127739801711)
-    if str(me.id) not in hands:
-        hands.update({str(me.id): []})
-        dumpData()
-
-    if len(hands[str(me.id)]) == 5:
-        await ctx.send("Maximum number of cards reached.")
-        return
-    gameDraw(me, 1)
-    dumpData()
-    await ctx.send("**CARD DEALT: " + str(len(hands[str(me.id)])) + "/5**", file=showHand(me))
 
 
 @client.command(description="Reset hands.",
@@ -449,18 +464,27 @@ async def reset_error(ctx, error):
         await ctx.send("You are not authorized to use this command.")
 
 
-class Game(commands.Cog):
-    global gameUnderway, gameStarted, currentGame
+@loop(seconds=1)
+async def gameLoop():
+    global gameChannelID
+    dumpData()
+    if not gameStarted:
+        return
 
-    def __init__(self):
-        self.gameLoop.start()
+    if gameUnderway:
+        if currentGame == "POKER":
+            print("ok")
+            loadData()
+            if len(hands["716357127739801711"]) == 5:
+                channel = client.get_channel(gameChannelID)
+                await channel.send("All cards dealt, revealing all players' hands...")
 
-    @tasks.loop(seconds=1)
-    async def gameLoop(self):
-        dumpData()
-        if not gameStarted or not gameUnderway:
-            return
+                for ID in players:
+                    user = client.get_user(int(ID))
+                    await channel.send("**" + user.mention + "'s hand**", file=showHand(user))
+
+                endGame()
 
 
-client.add_cog(Game())
+client.load_extension('Poker')
 client.run(TOKEN)

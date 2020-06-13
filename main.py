@@ -15,7 +15,7 @@ from timeit import default_timer as timer
 from PIL import Image, ImageDraw, ImageColor
 
 BOT_PREFIX = "%"
-TOKEN = "NzE2MzU3MTI3NzM5ODAxNzEx.XuPISw.PGp1lEC7o-R3Ixy-ONDsea4molk"
+TOKEN = ""
 
 client = Bot(command_prefix=BOT_PREFIX)
 
@@ -149,6 +149,36 @@ def drawCard(user: discord.Member):
     card = Image.open(str(imgName))
     card = card.resize((69, 105))
     return card
+
+
+def gameDraw(user: discord.Member, numDraws: int):
+    global tempDeck, deck
+    for i in range(0, numDraws):
+        if len(tempDeck) < numDraws:
+            tempDeck = deck
+
+        selectCard = random.choice(tempDeck)
+        addCard(user, selectCard)
+        tempDeck.remove(selectCard)
+
+
+def showHand(user: discord.Member):
+    loadData()
+
+    sortHand(user)
+    userHand = hands[str(user.id)]
+    numCards = len(userHand)
+    maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
+    hand = Image.new("RGB", (maxWidth, 125), ImageColor.getrgb("#078528"))
+
+    for i in range(0, numCards):
+        card = Image.open(userHand[i])
+        card = card.resize((69, 105))
+        hand.paste(card, (10 + int(cardWidth / 3) * i, 10))
+
+    hand.save('hand.png', format='PNG')
+    file = discord.File(open('hand.png', 'rb'))
+    return file
 
 
 def sortHand(user: discord.Member):
@@ -293,18 +323,20 @@ async def setSort(ctx, sortType: str = None):
     dumpData()
 
 
-@client.command(description="Start a game of 5-card draw.",
-                brief="Start a game of 5-card draw",
+@client.command(description="Start a game.",
+                brief="Start a game",
                 aliases=['5card'],
                 pass_context=True)
-async def fivecard(ctx):
-    global currentGame, gameStarted
+async def game(ctx, TYPE: str):
+    global currentGame, gameStarted, tempDeck, deck
+    TYPE = TYPE.upper()
     if gameStarted:
         await ctx.send("There is another game underway.")
         return
-    currentGame = "5card"
+    currentGame = TYPE
     gameStarted = True
-    await ctx.send("Five card draw game started.")
+    tempDeck = deck
+    await ctx.send("Game type: **" + currentGame.upper() + "**")
 
 
 @client.command(description="Join a game that is not yet underway.",
@@ -329,7 +361,7 @@ async def join(ctx):
                 pass_context=True)
 async def start(ctx):
     loadData()
-    global players, gameStarted, gameUnderway
+    global players, gameStarted, gameUnderway, currentGame
     if not gameStarted:
         await ctx.send("There is no game to start.")
         return
@@ -348,7 +380,7 @@ async def start(ctx):
         output += user.mention + "\n"
 
     await ctx.send(output)
-    global tempDeck, deck
+    global tempDeck
     tempDeck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
                 "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
                 "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
@@ -361,6 +393,44 @@ async def start(ctx):
                 "deck/QH.png", "deck/QS.png",
                 "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
     gameUnderway = True
+
+    if currentGame == "POKER":
+        for ID in players:
+            user = client.get_user(int(ID))
+            gameDraw(user, 2)
+
+
+@client.command(description="Deal next card in Poker",
+                brief="Deal next card in Poker",
+                pass_context=True)
+async def dealNext(ctx):
+    if not gameStarted:
+        await ctx.send("No game is active.")
+        return
+
+    if not gameUnderway:
+        await ctx.send("The game is not yet underway.")
+        return
+
+    if players.count(str(ctx.author.id)) <= 0:
+        await ctx.send("You are not in this game.")
+        return
+
+    if currentGame != "POKER":
+        await ctx.send("This command is only for POKER games.")
+        return
+
+    me = client.get_user(716357127739801711)
+    if str(me.id) not in hands:
+        hands.update({str(me.id): []})
+        dumpData()
+
+    if len(hands[str(me.id)]) == 5:
+        await ctx.send("Maximum number of cards reached.")
+        return
+    gameDraw(me, 1)
+    dumpData()
+    await ctx.send("**CARD DEALT: " + str(len(hands[str(me.id)])) + "/5**", file=showHand(me))
 
 
 @client.command(description="Reset hands.",

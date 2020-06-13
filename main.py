@@ -15,7 +15,7 @@ from timeit import default_timer as timer
 from PIL import Image, ImageDraw, ImageColor
 
 BOT_PREFIX = "%"
-TOKEN = "NzE2MzU3MTI3NzM5ODAxNzEx.XuPISw.PGp1lEC7o-R3Ixy-ONDsea4molk"
+TOKEN = ""
 
 client = Bot(command_prefix=BOT_PREFIX)
 

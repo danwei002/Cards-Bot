@@ -1,8 +1,10 @@
 # Work with Python 3.6
 # USED IMPORTS
 import random
+import requests
 from random import randrange
 import asyncio
+from io import BytesIO
 import discord
 from discord.ext import commands
 import discord.ext.commands
@@ -10,6 +12,8 @@ from discord.ext.commands import Bot, has_permissions, CheckFailure
 from discord.ext.tasks import loop
 from discord.ext import tasks
 import json
+import urllib
+from urllib.request import Request
 import sys
 import io
 from timeit import default_timer as timer
@@ -22,8 +26,8 @@ TOKEN = ""
 client = Bot(command_prefix=BOT_PREFIX)
 
 offset = 10
-cardWidth = 69
-cardHeight = 105
+cardWidth = 138
+cardHeight = 210
 hands = {}
 userSortType = {}
 players = []
@@ -178,11 +182,11 @@ def showHand(user: discord.Member):
     userHand = hands[str(user.id)]
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-    hand = Image.new("RGB", (maxWidth, 125), ImageColor.getrgb("#078528"))
+    hand = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb("#078528"))
 
     for i in range(0, numCards):
         card = Image.open(userHand[i])
-        card = card.resize((69, 105))
+        card = card.resize((cardWidth, cardHeight))
         hand.paste(card, (10 + int(cardWidth / 3) * i, 10))
 
     hand.save('hand.png', format='PNG')
@@ -300,16 +304,22 @@ async def hand(ctx):
         await ctx.send("You have no cards in your hand " + ctx.author.mention)
         return
 
+    pfpUrl = ctx.author.avatar_url
+    headers = {'User-Agent': 'CardsBot'}
+    r = requests.get(str(pfpUrl), stream=True, headers=headers)
+    pfp = Image.open(BytesIO(r.content))
+    pfp.show()
+
     user = ctx.author
     sortHand(user)
     userHand = hands[str(user.id)]
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-    HAND = Image.new("RGB", (maxWidth, 125), ImageColor.getrgb("#078528"))
+    HAND = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb("#078528"))
 
     for i in range(0, numCards):
         card = Image.open(userHand[i])
-        card = card.resize((69, 105))
+        card = card.resize((cardWidth, cardHeight))
         HAND.paste(card, (10 + int(cardWidth / 3) * i, 10))
 
     HAND.save('hand.png', format='PNG')

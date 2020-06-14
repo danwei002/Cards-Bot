@@ -17,7 +17,7 @@ from urllib.request import Request
 import sys
 import io
 from timeit import default_timer as timer
-from PIL import Image, ImageDraw, ImageColor
+from PIL import Image, ImageDraw, ImageColor, ImageFont
 
 
 BOT_PREFIX = "%"
@@ -308,19 +308,31 @@ async def hand(ctx):
     headers = {'User-Agent': 'CardsBot'}
     r = requests.get(str(pfpUrl), stream=True, headers=headers)
     pfp = Image.open(BytesIO(r.content))
-    pfp.show()
+    pfp = pfp.resize((32, 32))
 
     user = ctx.author
     sortHand(user)
     userHand = hands[str(user.id)]
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-    HAND = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb("#078528"))
+
+    font = ImageFont.truetype('calibri.ttf', size=20)
+    textWidth = font.getsize(str(user.name))[0]
+
+    if textWidth > maxWidth:
+        maxWidth = textWidth + 69
+
+    HAND = Image.new("RGB", (maxWidth, cardHeight + 70), ImageColor.getrgb("#078528"))
+    DRAW = ImageDraw.Draw(HAND)
+    DRAW.rectangle([0, 0, HAND.width - 1, 50], outline=ImageColor.getrgb("#000000"), fill=ImageColor.getrgb("#3e434a"), width=2)
+
+    DRAW.text((55, 17), str(user.name), fill=ImageColor.getrgb("#ffffff"), font=font)
+    HAND.paste(pfp, (9, 9))
 
     for i in range(0, numCards):
         card = Image.open(userHand[i])
         card = card.resize((cardWidth, cardHeight))
-        HAND.paste(card, (10 + int(cardWidth / 3) * i, 10))
+        HAND.paste(card, (10 + int(cardWidth / 3) * i, 60))
 
     HAND.save('hand.png', format='PNG')
     file = discord.File(open('hand.png', 'rb'))

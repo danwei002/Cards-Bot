@@ -19,7 +19,6 @@ import io
 from timeit import default_timer as timer
 from PIL import Image, ImageDraw, ImageColor, ImageFont
 
-
 BOT_PREFIX = "%"
 TOKEN = ""
 
@@ -179,17 +178,58 @@ def showHand(user: discord.Member):
     loadData()
 
     sortHand(user)
+    # Get user PFP
+    pfpUrl = user.avatar_url
+    headers = {'User-Agent': 'CardsBot'}
+    r = requests.get(str(pfpUrl), stream=True, headers=headers)
+    pfp = Image.open(BytesIO(r.content))
+    pfp = pfp.resize((32, 32))
+
+    # Find dimensions
+    sortHand(user)
     userHand = hands[str(user.id)]
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-    hand = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb("#078528"))
 
+    # Test font size
+    font = ImageFont.truetype('calibri.ttf', size=20)
+    textWidth = font.getsize(str(user.name))[0]
+    bottomTextWidth = font.getsize("Number of Cards: " + str(numCards))[0]
+
+    # Check size and width
+    if textWidth > maxWidth:
+        maxWidth = textWidth + 69
+
+    if bottomTextWidth > maxWidth:
+        maxWidth = bottomTextWidth + 69
+
+    # Create base hand image
+    HAND = Image.new("RGB", (maxWidth, cardHeight + 130), ImageColor.getrgb("#078528"))
+    DRAW = ImageDraw.Draw(HAND)
+
+    # Fill top grey bar
+    DRAW.rectangle([0, 0, HAND.width, 50], outline=ImageColor.getrgb("#000000"), fill=ImageColor.getrgb("#3e434a"),
+                   width=2)
+
+    # Fill bottom grey bar
+    DRAW.rectangle([0, cardHeight + 80, HAND.width, HAND.height], outline=ImageColor.getrgb("#000000"),
+                   fill=ImageColor.getrgb("#3e434a"), width=2)
+
+    # Draw text and superimpose PFP
+    DRAW.text((55, 17), str(user.name), fill=ImageColor.getrgb("#ffffff"), font=font)
+    HAND.paste(pfp, (9, 9))
+
+    # Add statistics to bottom bar
+    DRAW.text((9, cardHeight + 97), "Number of Cards: " + str(numCards), fill=ImageColor.getrgb("#ffffff"), font=font)
+
+    font = ImageFont.truetype('calibri.ttf', size=14)
     for i in range(0, numCards):
         card = Image.open(userHand[i])
         card = card.resize((cardWidth, cardHeight))
-        hand.paste(card, (10 + int(cardWidth / 3) * i, 10))
+        HAND.paste(card, (10 + int(cardWidth / 3) * i, 60))
+        DRAW.text((30 + int(cardWidth / 3) * i, 275), str(i), fill=ImageColor.getrgb("#ffffff"), font=font)
 
-    hand.save('hand.png', format='PNG')
+    HAND.save('hand.png', format='PNG')
     file = discord.File(open('hand.png', 'rb'))
     return file
 
@@ -304,39 +344,7 @@ async def hand(ctx):
         await ctx.send("You have no cards in your hand " + ctx.author.mention)
         return
 
-    pfpUrl = ctx.author.avatar_url
-    headers = {'User-Agent': 'CardsBot'}
-    r = requests.get(str(pfpUrl), stream=True, headers=headers)
-    pfp = Image.open(BytesIO(r.content))
-    pfp = pfp.resize((32, 32))
-
-    user = ctx.author
-    sortHand(user)
-    userHand = hands[str(user.id)]
-    numCards = len(userHand)
-    maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
-
-    font = ImageFont.truetype('calibri.ttf', size=20)
-    textWidth = font.getsize(str(user.name))[0]
-
-    if textWidth > maxWidth:
-        maxWidth = textWidth + 69
-
-    HAND = Image.new("RGB", (maxWidth, cardHeight + 70), ImageColor.getrgb("#078528"))
-    DRAW = ImageDraw.Draw(HAND)
-    DRAW.rectangle([0, 0, HAND.width - 1, 50], outline=ImageColor.getrgb("#000000"), fill=ImageColor.getrgb("#3e434a"), width=2)
-
-    DRAW.text((55, 17), str(user.name), fill=ImageColor.getrgb("#ffffff"), font=font)
-    HAND.paste(pfp, (9, 9))
-
-    for i in range(0, numCards):
-        card = Image.open(userHand[i])
-        card = card.resize((cardWidth, cardHeight))
-        HAND.paste(card, (10 + int(cardWidth / 3) * i, 60))
-
-    HAND.save('hand.png', format='PNG')
-    file = discord.File(open('hand.png', 'rb'))
-    await ctx.author.send(ctx.author.mention, file=file)
+    await ctx.author.send(file=showHand(ctx.author))
 
 
 @client.command(description="Set sorting type. Use 'p' for president-style sorting (3 low, 2 high), 'd' for default sorting (A low, K high), 's' for suit sorting (diamonds - spades).",

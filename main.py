@@ -1,23 +1,22 @@
-# Work with Python 3.6
-# USED IMPORTS
+# CARDS BOT
 import random
 import requests
-from random import randrange
-import asyncio
-from io import BytesIO
-import discord
-from discord.ext import commands
-import discord.ext.commands
-from discord.ext.commands import Bot, has_permissions, CheckFailure
-from discord.ext.tasks import loop
-from discord.ext import tasks
 import json
-import urllib
-from urllib.request import Request
+import asyncio
+import discord.ext.commands
+import discord
+import re
 import sys
 import io
-from timeit import default_timer as timer
+
+from io import BytesIO
+from discord.ext.commands import Bot, has_permissions, CheckFailure
+from discord.ext.tasks import loop
 from PIL import Image, ImageDraw, ImageColor, ImageFont
+from discord.ext import tasks
+from random import randrange
+from discord.ext import commands
+
 
 BOT_PREFIX = "%"
 TOKEN = ""
@@ -29,6 +28,7 @@ cardWidth = 138
 cardHeight = 210
 hands = {}
 userSortType = {}
+handColors = {}
 players = []
 
 gameType = {"5card": 0}
@@ -40,32 +40,37 @@ gameChannelID = None
 
 @client.event
 async def on_ready():
-    dumpData()
     loadData()
+    hands.clear()
+    players.clear()
     gameLoop.start()
     print("Now online.")
 
 
 # Load user hands
 def loadData():
-    global hands, userSortType, players
+    global hands, userSortType, players, handColors
     with open('hands.json') as hFile:
         hands = json.load(hFile)
     with open('sortType.json') as sTFile:
         userSortType = json.load(sTFile)
     with open('players.json') as pFile:
         players = json.load(pFile)
+    with open('handColors.json') as hCFile:
+        handColors = json.load(hCFile)
 
 
 # Dump user hands
 def dumpData():
-    global hands, userSortType
+    global hands, userSortType, players, handColors
     with open('hands.json', 'w') as hFile:
         json.dump(hands, hFile)
     with open('sortType.json', 'w') as sTFile:
         json.dump(userSortType, sTFile)
     with open('players.json', 'w') as pFile:
         json.dump(players, pFile)
+    with open('handColors.json', 'w') as hCFile:
+        json.dump(handColors, hCFile)
 
 
 # Add card to user's hand
@@ -144,6 +149,7 @@ deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png
         "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
 
 tempDeck = deck
+drawDeck = deck
 
 suits = ['C', 'D', 'H', 'S']
 
@@ -170,8 +176,17 @@ def gameDraw(user: discord.Member, numDraws: int):
 
 
 def endGame():
-    global gameStarted
+    loadData()
+    global gameStarted, gameUnderway, players, hands
     gameStarted = False
+    gameUnderway = False
+    for player in players:
+        hands[player].clear()
+
+    players.clear()
+
+    if "716357127739801711" in hands:
+        del hands["716357127739801711"]
 
 
 def showHand(user: discord.Member):
@@ -203,8 +218,14 @@ def showHand(user: discord.Member):
     if bottomTextWidth > maxWidth:
         maxWidth = bottomTextWidth + 69
 
+    COLOR = ""
+    if not str(user.id) in handColors:
+        COLOR = "#078528"
+    else:
+        COLOR = handColors[str(user.id)]
+
     # Create base hand image
-    HAND = Image.new("RGB", (maxWidth, cardHeight + 130), ImageColor.getrgb("#078528"))
+    HAND = Image.new("RGB", (maxWidth, cardHeight + 130), ImageColor.getrgb(COLOR))
     DRAW = ImageDraw.Draw(HAND)
 
     # Fill top grey bar
@@ -231,6 +252,7 @@ def showHand(user: discord.Member):
 
     HAND.save('hand.png', format='PNG')
     file = discord.File(open('hand.png', 'rb'))
+    dumpData()
     return file
 
 
@@ -267,9 +289,8 @@ def sortHand(user: discord.Member):
 
 @client.command(description="Generate a random card. Duplicates can appear.",
                 brief="Generate a random card",
-                aliases=['rc'],
                 pass_context=True)
-async def randcard(ctx):
+async def rc(ctx):
     loadData()
     if gameStarted and str(ctx.author.id) in players:
         await ctx.send("This command is not available while you are in a game.")
@@ -282,10 +303,9 @@ async def randcard(ctx):
     await ctx.send(ctx.author.mention, file=file)
 
 
-@client.command(
-    description="Pull a number of random cards from the deck. Pulled cards cannot be pulled a second time unless the deck is reset.",
-    brief="Draw a number of cards from the deck",
-    pass_context=True)
+@client.command(description="Pull a number of random cards from the deck. Pulled cards cannot be pulled a second time unless the deck is reset.",
+                brief="Draw a number of cards from the deck",
+                pass_context=True)
 async def draw(ctx, cards: int = 1):
     loadData()
 
@@ -293,13 +313,13 @@ async def draw(ctx, cards: int = 1):
         await ctx.send("This command is not available while you are in a game.")
         return
 
-    global tempDeck
-    if cards > len(tempDeck):
+    global drawDeck
+    if cards > len(drawDeck):
         await ctx.send("Not enough cards left in the deck.")
         return
     for i in range(0, cards):
-        cardName = random.choice(tempDeck)
-        tempDeck.remove(cardName)
+        cardName = random.choice(drawDeck)
+        drawDeck.remove(cardName)
         addCard(ctx.author, cardName)
     await ctx.send("You have received your cards " + ctx.author.mention)
     dumpData()
@@ -309,19 +329,19 @@ async def draw(ctx, cards: int = 1):
                 brief="View how many cards are left in the deck",
                 pass_context=True)
 async def deck(ctx):
-    global tempDeck
-    if len(tempDeck) == 1:
-        await ctx.send("There is " + str(len(tempDeck)) + " card left in the deck.")
+    global drawDeck
+    if len(drawDeck) == 1:
+        await ctx.send("There is " + str(len(drawDeck)) + " card left in the deck.")
     else:
-        await ctx.send("There are " + str(len(tempDeck)) + " cards left in the deck.")
+        await ctx.send("There are " + str(len(drawDeck)) + " cards left in the deck.")
 
 
 @client.command(description="Refill the deck",
                 brief="Refill the deck",
                 pass_context=True)
 async def refill(ctx):
-    global tempDeck
-    tempDeck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
+    global drawDeck
+    drawDeck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
                 "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
                 "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
                 "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
@@ -349,11 +369,12 @@ async def hand(ctx):
 
 @client.command(description="Set sorting type. Use 'p' for president-style sorting (3 low, 2 high), 'd' for default sorting (A low, K high), 's' for suit sorting (diamonds - spades).",
                 brief="Set sorting type",
+                aliases=['ss'],
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
     global order, presOrder, ORDER
     if sortType is None:
-        await ctx.send("Invalid sorting type detected. Try 'p' or 'd'.")
+        await ctx.send("Invalid sorting type detected. Try 'p', 's', or 'd'.")
         return
 
     if sortType == 'd':
@@ -428,6 +449,8 @@ async def join(ctx):
         else:
             await ctx.send(ctx.author.mention + " you joined the game.")
             players.append(str(ctx.author.id))
+            if str(ctx.author.id) in hands:
+                del hands[str(ctx.author.id)]
     else:
         await ctx.send("A game is already underway.")
     dumpData()
@@ -477,6 +500,28 @@ async def start(ctx):
             user = client.get_user(int(ID))
             gameDraw(user, 2)
 
+        gameDraw(client.get_user(716357127739801711), 3)
+
+
+@client.command(description="Set a custom color using a hex code for your hand.",
+                brief="Set a custom color for your hand",
+                aliases=['sc', 'setColour'],
+                pass_context=True)
+async def setColor(ctx, colour: str):
+    match = re.search(r'^#(?:[0-9a-fA-F]{3}){1,2}$', colour)
+    if not match:
+        await ctx.send("That is not a valid hex color code.")
+        return
+
+    loadData()
+    if not str(ctx.author.id) in handColors:
+        handColors.update({str(ctx.author.id): colour})
+    else:
+        handColors[str(ctx.author.id)] = colour
+
+    await ctx.send("New custom colour set.")
+    dumpData()
+
 
 @client.command(description="Reset hands.",
                 brief="Reset hands",
@@ -503,7 +548,6 @@ async def gameLoop():
 
     if gameUnderway:
         if currentGame == "POKER":
-            print("ok")
             loadData()
             if len(hands["716357127739801711"]) == 5:
                 channel = client.get_channel(gameChannelID)

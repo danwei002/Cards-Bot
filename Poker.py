@@ -20,7 +20,7 @@ class Poker(commands.Cog):
     @commands.command(description="Deal next card in Poker",
                       brief="Deal next card in Poker",
                       pass_context=True)
-    async def dealNext(self, ctx):
+    async def next(self, ctx):
         if not main.gameStarted:
             await ctx.send("No game is active.")
             return
@@ -48,6 +48,29 @@ class Poker(commands.Cog):
         gameDraw(me, 1)
         dumpData()
         await ctx.send("**CARD DEALT: " + str(len(main.hands[str(me.id)])) + "/5**", file=showHand(me))
+
+    @commands.command(description="Show the community cards.",
+                      brief="Show the community cards",
+                      pass_context=True)
+    async def cards(self, ctx):
+        if not main.gameStarted:
+            await ctx.send("No game is active.")
+            return
+
+        if not main.gameUnderway:
+            await ctx.send("The game is not yet underway.")
+            return
+
+        if main.players.count(str(ctx.author.id)) <= 0:
+            await ctx.send("You are not in this game.")
+            return
+
+        if main.currentGame != "POKER":
+            await ctx.send("This command is only for POKER games.")
+            return
+
+        me = client.get_user(716357127739801711)
+        await ctx.send(file=showHand(me))
 
 def setup(bot):
     bot.add_cog(Poker(bot))

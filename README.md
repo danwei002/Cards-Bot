@@ -9,3 +9,4 @@ Current features:
 Currently working on:
 - Texas Hold 'Em (game)
 - President (game)
+- Betting

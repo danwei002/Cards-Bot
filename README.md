@@ -5,6 +5,7 @@ This is a discord bot I am working on that will hopefully one day support numero
 Current features:
 - Random card drawing
 - Random card generation
+- Some customizability of hand displays
 
 Currently working on:
 - Texas Hold 'Em (game)

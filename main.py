@@ -30,6 +30,7 @@ hands = {}
 userSortType = {}
 handColors = {}
 players = []
+money = {}
 
 gameType = {"5card": 0}
 currentGame = ""
@@ -49,7 +50,7 @@ async def on_ready():
 
 # Load user hands
 def loadData():
-    global hands, userSortType, players, handColors
+    global hands, userSortType, players, handColors, money
     with open('hands.json') as hFile:
         hands = json.load(hFile)
     with open('sortType.json') as sTFile:
@@ -58,11 +59,13 @@ def loadData():
         players = json.load(pFile)
     with open('handColors.json') as hCFile:
         handColors = json.load(hCFile)
+    with open('econ.json') as eFile:
+        money = json.load(eFile)
 
 
 # Dump user hands
 def dumpData():
-    global hands, userSortType, players, handColors
+    global hands, userSortType, players, handColors, money
     with open('hands.json', 'w') as hFile:
         json.dump(hands, hFile)
     with open('sortType.json', 'w') as sTFile:
@@ -71,6 +74,8 @@ def dumpData():
         json.dump(players, pFile)
     with open('handColors.json', 'w') as hCFile:
         json.dump(handColors, hCFile)
+    with open('econ.json', 'w') as eFile:
+        json.dump(money, eFile)
 
 
 # Add card to user's hand
@@ -560,5 +565,18 @@ async def gameLoop():
                 endGame()
 
 
+@client.event
+async def on_message(msg):
+    global money
+    await client.process_commands(msg)
+
+    if str(msg.author.id) not in money:
+        money.update({str(msg.author.id): 10000})
+
+    dumpData()
+
+
 client.load_extension('Poker')
+client.load_extension('Economy')
+client.load_extension('Betting')
 client.run(TOKEN)

@@ -42,6 +42,13 @@ class Betting(commands.Cog):
     async def __fold(self, ctx):
         a = 1
 
+    @commands.command(description="View the money in the pot.",
+                      brief="View the money in the pot",
+                      name='pot',
+                      pass_context=True)
+    async def __pot(self, ctx):
+        await ctx.send("The pot contains $" + str(main.pot))
+
 
 def setup(bot):
     bot.add_cog(Betting(bot))

@@ -9,6 +9,7 @@ import re
 import sys
 import io
 
+from CardEval import hasFlush, num_pairs, hasQuad, hasStraight, hasTriple
 from io import BytesIO
 from discord.ext.commands import Bot, has_permissions, CheckFailure
 from discord.ext.tasks import loop
@@ -23,20 +24,31 @@ TOKEN = ""
 
 client = Bot(command_prefix=BOT_PREFIX)
 
+# Card constants
 offset = 10
 cardWidth = 138
 cardHeight = 210
+
+# Data storage
 hands = {}
 userSortType = {}
 handColors = {}
 players = []
-money = {}
+
 
 gameType = {"5card": 0}
+
+# Game variables
 currentGame = ""
 gameStarted = False
 gameUnderway = False
 gameChannelID = None
+currGame = "cards"
+
+# Betting
+money = {}
+bets = {}
+pot = 0
 
 
 @client.event
@@ -112,6 +124,19 @@ order = {"deck/AD.png": 0, "deck/AC.png": 1, "deck/AH.png": 2, "deck/AS.png": 3,
          "deck/QH.png": 46, "deck/QS.png": 47,
          "deck/KD.png": 48, "deck/KC.png": 49, "deck/KH.png": 50, "deck/KS.png": 51}
 
+pokerOrder = {"deck/2D.png": 4, "deck/2C.png": 5,
+              "deck/2H.png": 6, "deck/2S.png": 7, "deck/3D.png": 8, "deck/3C.png": 9, "deck/3H.png": 10, "deck/3S.png": 11,
+              "deck/4D.png": 12, "deck/4C.png": 13, "deck/4H.png": 14, "deck/4S.png": 15, "deck/5D.png": 16,
+              "deck/5C.png": 17, "deck/5H.png": 18, "deck/5S.png": 19, "deck/6D.png": 20, "deck/6C.png": 21,
+              "deck/6H.png": 22, "deck/6S.png": 23,
+              "deck/7D.png": 24, "deck/7C.png": 25, "deck/7H.png": 26, "deck/7S.png": 27, "deck/8D.png": 28,
+              "deck/8C.png": 29, "deck/8H.png": 30, "deck/8S.png": 31, "deck/9D.png": 32, "deck/9C.png": 33,
+              "deck/9H.png": 34, "deck/9S.png": 35,
+              "deck/10D.png": 36, "deck/10C.png": 37, "deck/10H.png": 38, "deck/10S.png": 39, "deck/JD.png": 40,
+              "deck/JC.png": 41, "deck/JH.png": 42, "deck/JS.png": 43, "deck/QD.png": 44, "deck/QC.png": 45,
+              "deck/QH.png": 46, "deck/QS.png": 47,
+              "deck/KD.png": 48, "deck/KC.png": 49, "deck/KH.png": 50, "deck/KS.png": 51, "deck/AD.png": 52, "deck/AC.png": 53, "deck/AH.png": 54, "deck/AS.png": 55}
+
 presOrder = {"deck/3D.png": 8, "deck/3C.png": 9, "deck/3H.png": 10,
              "deck/3S.png": 11,
              "deck/4D.png": 12, "deck/4C.png": 13, "deck/4H.png": 14, "deck/4S.png": 15, "deck/5D.png": 16,
@@ -182,14 +207,14 @@ def gameDraw(user: discord.Member, numDraws: int):
 
 def endGame():
     loadData()
-    global gameStarted, gameUnderway, players, hands
+    global gameStarted, gameUnderway, players, hands, currGame
     gameStarted = False
     gameUnderway = False
     for player in players:
         hands[player].clear()
 
     players.clear()
-
+    currGame = "cards"
     if "716357127739801711" in hands:
         del hands["716357127739801711"]
 
@@ -290,6 +315,55 @@ def sortHand(user: discord.Member):
             h.insert(index, card)
 
     hands[str(user.id)] = h
+
+
+def evaluateHand(user: discord.Member):
+    global hands
+    cardVals = []
+    cardSuits = []
+    conversion = {'J': 11, 'Q': 12, 'K': 13, 'A': 14}
+    for card in hands[str(user.id)]:
+        if len(card) == 11:
+            if card[5] == 'J' or card[5] == 'Q' or card[5] == 'K' or card[5] == 'A':
+                cardVals.append(conversion[card[5]])
+            else:
+                cardVals.append(int(card[5]))
+            cardSuits.append(card[6])
+        else:
+            cardVals.append(10)
+            cardSuits.append(card[7])
+
+    cardVals.sort()
+
+    royalFlush = hasFlush(cardSuits) and cardVals[0] == 10
+    flush = hasFlush(cardSuits)
+    straight = hasStraight(cardVals)
+    fourKind = hasQuad(cardVals)
+    fullHouse = hasTriple(cardVals) and num_pairs(cardVals) == 4
+    triple = hasTriple(cardVals) and num_pairs(cardVals) == 3
+    twoPair = num_pairs(cardVals) == 2
+    onePair = num_pairs(cardVals) == 1 and not hasTriple(cardVals)
+
+    if royalFlush:
+        return 0
+    elif flush and straight:
+        return 1
+    elif fourKind:
+        return 2
+    elif fullHouse:
+        return 3
+    elif flush:
+        return 4
+    elif straight:
+        return 5
+    elif triple:
+        return 6
+    elif twoPair:
+        return 7
+    elif onePair:
+        return 8
+    else:
+        return 9
 
 
 @client.command(description="Generate a random card. Duplicates can appear.",
@@ -404,7 +478,7 @@ async def setSort(ctx, sortType: str = None):
                 aliases=['5card'],
                 pass_context=True)
 async def game(ctx):
-    global currentGame, gameStarted, tempDeck, deck, gameChannelID
+    global currentGame, gameStarted, tempDeck, deck, gameChannelID, currGame
     if gameStarted:
         await ctx.send("There is another game underway.")
         return
@@ -431,6 +505,7 @@ async def game(ctx):
     else:
         if str(rxn[0].emoji) == emoji1:
             currentGame = "POKER"
+            currGame = "Texas Hold 'Em"
             await ctx.send("Texas Hold 'Em selected.")
         elif str(rxn[0].emoji) == emoji2:
             currentGame = "5CARD"
@@ -546,6 +621,7 @@ async def reset_error(ctx, error):
 
 @loop(seconds=1)
 async def gameLoop():
+    await client.change_presence(activity=discord.Game(name=currGame))
     global gameChannelID
     dumpData()
     if not gameStarted:

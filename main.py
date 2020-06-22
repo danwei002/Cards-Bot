@@ -9,7 +9,7 @@ import re
 import sys
 import io
 
-from CardEval import hasFlush, num_pairs, hasQuad, hasStraight, hasTriple
+from CardEval import evaluateHand, handType
 from io import BytesIO
 from discord.ext.commands import Bot, has_permissions, CheckFailure
 from discord.ext.tasks import loop
@@ -317,55 +317,6 @@ def sortHand(user: discord.Member):
     hands[str(user.id)] = h
 
 
-def evaluateHand(user: discord.Member):
-    global hands
-    cardVals = []
-    cardSuits = []
-    conversion = {'J': 11, 'Q': 12, 'K': 13, 'A': 14}
-    for card in hands[str(user.id)]:
-        if len(card) == 11:
-            if card[5] == 'J' or card[5] == 'Q' or card[5] == 'K' or card[5] == 'A':
-                cardVals.append(conversion[card[5]])
-            else:
-                cardVals.append(int(card[5]))
-            cardSuits.append(card[6])
-        else:
-            cardVals.append(10)
-            cardSuits.append(card[7])
-
-    cardVals.sort()
-
-    royalFlush = hasFlush(cardSuits) and cardVals[0] == 10
-    flush = hasFlush(cardSuits)
-    straight = hasStraight(cardVals)
-    fourKind = hasQuad(cardVals)
-    fullHouse = hasTriple(cardVals) and num_pairs(cardVals) == 4
-    triple = hasTriple(cardVals) and num_pairs(cardVals) == 3
-    twoPair = num_pairs(cardVals) == 2
-    onePair = num_pairs(cardVals) == 1 and not hasTriple(cardVals)
-
-    if royalFlush:
-        return 0
-    elif flush and straight:
-        return 1
-    elif fourKind:
-        return 2
-    elif fullHouse:
-        return 3
-    elif flush:
-        return 4
-    elif straight:
-        return 5
-    elif triple:
-        return 6
-    elif twoPair:
-        return 7
-    elif onePair:
-        return 8
-    else:
-        return 9
-
-
 @client.command(description="Generate a random card. Duplicates can appear.",
                 brief="Generate a random card",
                 pass_context=True)
@@ -634,10 +585,25 @@ async def gameLoop():
                 channel = client.get_channel(gameChannelID)
                 await channel.send("All cards dealt, revealing all players' hands...")
 
+                score = {}
+                overallMax = 0
                 for ID in players:
                     user = client.get_user(int(ID))
-                    await channel.send("**" + user.mention + "'s hand**", file=showHand(user))
+                    community = hands["716357127739801711"]
+                    maxScore = 0
 
+                    for i in range(0, 5):
+                        for j in range(i + 1, 5):
+                            for k in range(j + 1, 5):
+                                cardVals = [hands[str(user.id)][0], hands[str(user.id)][1], community[i], community[j], community[k]]
+                                maxScore = max(maxScore, evaluateHand(cardVals))
+
+                    score.update({maxScore: ID})
+                    overallMax = max(maxScore, overallMax)
+
+                    await channel.send("**" + user.name + " has a " + handType(maxScore) + ". Score of " + str(maxScore) + "**", file=showHand(user))
+
+                await channel.send("The winner is " + client.get_user(int(score[overallMax])).mention)
                 endGame()
 
 

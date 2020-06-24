@@ -1,6 +1,6 @@
-import itertools
+# FOR COMBO RECOGNITION AND EVALUATION
 
-
+# Check for a flush
 def hasFlush(__suits):
     for suit in __suits:
         if suit != __suits[0]:
@@ -8,13 +8,13 @@ def hasFlush(__suits):
     return True
 
 
+# Find a straight in a set of 5 cards
 def hasStraight(__cards):
     __cards.sort()
-    for card in __cards:
-        print(card)
     return __cards[0] == __cards[1] - 1 == __cards[2] - 2 == __cards[3] - 3 == __cards[4] - 4
 
 
+# Find a quadruple in a set of 5 cards
 def hasQuad(__cards):
     __cards.sort()
     cardSet = set(__cards)
@@ -31,6 +31,7 @@ def hasQuad(__cards):
     return False
 
 
+# Find a triple in a set of 5 cards
 def hasTriple(__cards):
     __cards.sort()
     cardSet = set(__cards)
@@ -48,6 +49,7 @@ def hasTriple(__cards):
     return False
 
 
+# Find the number of pairs in a set of 5 cards
 def num_pairs(__cards):
     res = 0
     for i in range(0, len(__cards)):
@@ -57,6 +59,7 @@ def num_pairs(__cards):
     return res
 
 
+# Find a pair of values in a set of 5 cards
 def get_pair(__cards):
     for i in range(0, len(__cards)):
         for j in range(i + 1, len(__cards)):
@@ -64,6 +67,7 @@ def get_pair(__cards):
                 return __cards[i]
 
 
+# Get the sum of values of a hand
 def get_sum(__cards):
     res = 0
     for i in range(0, len(__cards)):
@@ -71,6 +75,7 @@ def get_sum(__cards):
     return res
 
 
+# Score a 5 card hand with a numerical value
 def evaluateHand(cards):
     cardVals = []
     cardSuits = []
@@ -137,6 +142,7 @@ def evaluateHand(cards):
         return 1000 + cardVals[4] * 5 + cardVals[3] * 4 + cardVals[2] * 3 + cardVals[1] * 2 + cardVals[0]
 
 
+# Return a string corresponding to combo type
 def handType(handValue):
     if 1000 <= handValue < 2000:
         return "High Card"

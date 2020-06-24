@@ -49,6 +49,7 @@ currGame = "cards"
 money = {}
 bets = {}
 pot = 0
+maxBet = 0
 
 
 @client.event
@@ -56,6 +57,7 @@ async def on_ready():
     loadData()
     hands.clear()
     players.clear()
+    await asyncio.sleep(1)
     gameLoop.start()
     print("Now online.")
 
@@ -207,13 +209,16 @@ def gameDraw(user: discord.Member, numDraws: int):
 
 def endGame():
     loadData()
-    global gameStarted, gameUnderway, players, hands, currGame
+    global gameStarted, gameUnderway, players, hands, currGame, maxBet, pot
     gameStarted = False
     gameUnderway = False
     for player in players:
         hands[player].clear()
 
     players.clear()
+    bets.clear()
+    maxBet = 0
+    pot = 0
     currGame = "cards"
     if "716357127739801711" in hands:
         del hands["716357127739801711"]
@@ -315,6 +320,7 @@ def sortHand(user: discord.Member):
             h.insert(index, card)
 
     hands[str(user.id)] = h
+    dumpData()
 
 
 @client.command(description="Generate a random card. Duplicates can appear.",
@@ -402,6 +408,7 @@ async def hand(ctx):
                 aliases=['ss'],
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
+    loadData()
     global order, presOrder, ORDER
     if sortType is None:
         await ctx.send("Invalid sorting type detected. Try 'p', 's', or 'd'.")
@@ -479,6 +486,8 @@ async def join(ctx):
             await ctx.send("You are already in this game.")
         else:
             await ctx.send(ctx.author.mention + " you joined the game.")
+            if str(ctx.author.id) not in money:
+                money.update({str(ctx.author.id): 10000})
             players.append(str(ctx.author.id))
             if str(ctx.author.id) in hands:
                 del hands[str(ctx.author.id)]
@@ -492,7 +501,7 @@ async def join(ctx):
                 pass_context=True)
 async def start(ctx):
     loadData()
-    global players, gameStarted, gameUnderway, currentGame
+    global players, gameStarted, gameUnderway, currentGame, pot, maxBet
     if not gameStarted:
         await ctx.send("There is no game to start.")
         return
@@ -505,10 +514,15 @@ async def start(ctx):
         await ctx.send("You are not in this game.")
         return
 
-    output = "Game started.\nIn this game:\n"
+    output = "Game started. Ante is $50\nIn this game:\n"
     for ID in players:
         user = client.get_user(int(ID))
         output += user.mention + "\n"
+        bets.update({ID: 50})
+        money[ID] -= 50
+        pot += 50
+
+    maxBet = 50
 
     await ctx.send(output)
     global tempDeck
@@ -533,6 +547,7 @@ async def start(ctx):
 
         gameDraw(client.get_user(716357127739801711), 3)
 
+    dumpData()
 
 @client.command(description="Set a custom color using a hex code for your hand.",
                 brief="Set a custom color for your hand",
@@ -573,7 +588,7 @@ async def reset_error(ctx, error):
 @loop(seconds=1)
 async def gameLoop():
     await client.change_presence(activity=discord.Game(name=currGame))
-    global gameChannelID
+    global gameChannelID, pot
     dumpData()
     if not gameStarted:
         return
@@ -603,7 +618,10 @@ async def gameLoop():
 
                     await channel.send("**" + user.name + " has a " + handType(maxScore) + ". Score of " + str(maxScore) + "**", file=showHand(user))
 
-                await channel.send("The winner is " + client.get_user(int(score[overallMax])).mention)
+                await channel.send("The winner is " + client.get_user(int(score[overallMax])).mention + ", winning the pot of $" + str(pot))
+                money[score[overallMax]] += pot
+
+                dumpData()
                 endGame()
 
 

@@ -16,6 +16,14 @@ from PIL import Image, ImageDraw, ImageColor
 import main
 from main import client, dumpData, loadData, gameDraw, showHand
 
+def betCheck(toMatch):
+    needToMatch = []
+    for ID, bet in main.bets.items():
+        if bet < main.maxBet:
+            needToMatch.append(ID)
+    return needToMatch
+
+
 class Poker(commands.Cog):
     @commands.command(description="Deal next card in Poker",
                       brief="Deal next card in Poker",
@@ -37,14 +45,14 @@ class Poker(commands.Cog):
             await ctx.send("This command is only for POKER games.")
             return
 
-        me = client.get_user(716357127739801711)
-        if str(me.id) not in main.hands:
-            main.hands.update({str(me.id): []})
-            dumpData()
-
-        if len(main.hands[str(me.id)]) == 5:
-            await ctx.send("Maximum number of cards reached.")
+        needToMatch = betCheck(main.maxBet)
+        if len(needToMatch):
+            await ctx.send("All players must either match the highest bet or fold.\nPlayers who still must take action:")
+            for ID in needToMatch:
+                await ctx.send(client.get_user(int(ID)).mention)
             return
+
+        me = client.get_user(716357127739801711)
         gameDraw(me, 1)
         dumpData()
         await ctx.send("**CARD DEALT: " + str(len(main.hands[str(me.id)])) + "/5**", file=showHand(me))

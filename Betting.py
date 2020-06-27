@@ -1,20 +1,4 @@
 # CARDS BOT
-import random
-import requests
-import json
-import asyncio
-import discord.ext.commands
-import discord
-import re
-import sys
-import io
-
-from io import BytesIO
-from discord.ext.commands import Bot, has_permissions, CheckFailure
-from discord.ext.tasks import loop
-from PIL import Image, ImageDraw, ImageColor, ImageFont
-from discord.ext import tasks
-from random import randrange
 from discord.ext import commands
 
 import main
@@ -54,6 +38,11 @@ class Betting(commands.Cog):
         await ctx.send(ctx.author.mention + " you raised your bet to $" + str(main.bets[ID]))
 
         dumpData()
+
+    @__raise.error
+    async def raise_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("Invalid arguments detected for command 'raise'. Try %raise <raiseBy>.")
 
     @commands.command(description="Call to the most recent raise.",
                       brief="Call to the most recent raise",
@@ -106,6 +95,17 @@ class Betting(commands.Cog):
             await ctx.send("Can't use this command now.")
             return
         await ctx.send("The pot contains $" + str(main.pot))
+
+    @commands.command(description="Check the current highest bet.",
+                      brief="Check the current highest bet",
+                      name='highest',
+                      pass_context=True)
+    async def __highest(self, ctx):
+        ID = str(ctx.author.id)
+        if not inGameCheck(ID):
+            await ctx.send("Can't use this command now.")
+            return
+        await ctx.send("The current highest bet is $" + str(main.maxBet))
 
 
 def setup(bot):

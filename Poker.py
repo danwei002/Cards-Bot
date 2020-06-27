@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageColor
 import main
 from main import client, dumpData, loadData, gameDraw, showHand
 
-def betCheck(toMatch):
+def betCheck():
     needToMatch = []
     for ID, bet in main.bets.items():
         if bet < main.maxBet:
@@ -45,7 +45,7 @@ class Poker(commands.Cog):
             await ctx.send("This command is only for POKER games.")
             return
 
-        needToMatch = betCheck(main.maxBet)
+        needToMatch = betCheck()
         if len(needToMatch):
             await ctx.send("All players must either match the highest bet or fold.\nPlayers who still must take action:")
             for ID in needToMatch:

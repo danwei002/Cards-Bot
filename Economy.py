@@ -1,18 +1,8 @@
 # Work with Python 3.6
 # USED IMPORTS
-import random
-from random import randrange
-import asyncio
-import discord
 from discord.ext import commands
 import discord.ext.commands
 from discord.ext.commands import Bot, has_permissions, CheckFailure
-from discord.ext import tasks
-import json
-import sys
-import io
-from timeit import default_timer as timer
-from PIL import Image, ImageDraw, ImageColor
 import main
 from main import client, dumpData, loadData, gameDraw, showHand
 

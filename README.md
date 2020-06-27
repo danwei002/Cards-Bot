@@ -1,4 +1,4 @@
-# Cards-Bot
+# Discord Playing Cards Bot
 This is a discord bot I am working on that will support numerous types of playing card games, such as Texas Hold 'Em, President, etc.
 <br>
 <br>

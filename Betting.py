@@ -2,16 +2,7 @@
 from discord.ext import commands
 
 import main
-from main import client, dumpData, loadData, gameDraw, showHand
-
-
-def inGameCheck(ID):
-    if not main.gameUnderway or not main.gameStarted:
-        return False
-    if ID not in main.players:
-        return False
-    return True
-
+from main import loadData, dumpData, checkInGame, getGame, channelCheck
 
 class Betting(commands.Cog):
     @commands.command(description="Raise your bet.",
@@ -21,21 +12,32 @@ class Betting(commands.Cog):
     async def __raise(self, ctx, raiseBy: float):
         loadData()
         ID = str(ctx.author.id)
-        if not inGameCheck(ID):
-            await ctx.send("Can't use this command now.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
+
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
+            return
+
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
+            return
+
         if main.money[ID] < raiseBy:
             await ctx.send("Insufficient funds for such a bet.")
             return
 
-        if raiseBy + main.bets[ID] <= main.maxBet:
+        if raiseBy + GAME.bets[ID] <= GAME.maxBet:
             await ctx.send("Does not beat the current highest bet.")
             return
-        main.bets[ID] += raiseBy
+
+        GAME.bets[ID] += raiseBy
         main.money[ID] -= raiseBy
-        main.maxBet = main.bets[ID]
-        main.pot += raiseBy
-        await ctx.send(ctx.author.mention + " you raised your bet to $" + str(main.bets[ID]))
+        GAME.maxBet = GAME.bets[ID]
+        GAME.pot += raiseBy
+        await ctx.send(ctx.author.mention + " you raised your bet to $" + str(GAME.bets[ID]))
 
         dumpData()
 
@@ -44,29 +46,45 @@ class Betting(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send("Invalid arguments detected for command 'raise'. Try %raise <raiseBy>.")
 
-    @commands.command(description="Call to the most recent raise.",
-                      brief="Call to the most recent raise",
+    @commands.command(description="Call to the highest bet.",
+                      brief="Call to the highest bet",
                       name='call',
                       pass_context=True)
     async def __call(self, ctx):
         loadData()
         ID = str(ctx.author.id)
-        if not inGameCheck(ID):
-            await ctx.send("Can't use this command now.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
-        if main.money[ID] < main.maxBet:
+
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
+            return
+
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
+            return
+
+        if str(ID) in GAME.bets:
+            if GAME.bets[ID] == GAME.maxBet:
+                await ctx.send("You are already matching the highest bet.")
+                return
+
+        if main.money[ID] < GAME.maxBet:
             await ctx.send("Insufficient funds to match.")
             return
-        if ID in main.bets:
-            difference = main.maxBet - main.bets[ID]
-            main.pot += difference
-            main.bets[ID] = main.maxBet
+
+        if ID in GAME.bets:
+            difference = GAME.maxBet - GAME.bets[ID]
+            GAME.pot += difference
+            GAME.bets[ID] = GAME.maxBet
             main.money[ID] -= difference
         else:
-            main.pot += main.maxBet
-            main.bets[ID] = main.maxBet
-            main.money[ID] -= main.maxBet
-        await ctx.send(ctx.author.mention + " you matched a bet of $" + str(main.maxBet))
+            GAME.pot += GAME.maxBet
+            GAME.bets[ID] = GAME.maxBet
+            main.money[ID] -= GAME.maxBet
+        await ctx.send(ctx.author.mention + " you matched a bet of $" + str(GAME.maxBet))
         dumpData()
 
     @commands.command(description="Forfeit your bet and lay down your hand.",
@@ -76,12 +94,21 @@ class Betting(commands.Cog):
     async def __fold(self, ctx):
         loadData()
         ID = str(ctx.author.id)
-        if not inGameCheck(ID):
-            await ctx.send("Can't use this command now.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
 
-        main.players.remove(ID)
-        del main.bets[ID]
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
+            return
+
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
+            return
+
+        GAME.players.remove(ID)
+        del GAME.bets[ID]
 
         await ctx.send(ctx.author.mention + " you have folded.")
 
@@ -90,23 +117,38 @@ class Betting(commands.Cog):
                       name='pot',
                       pass_context=True)
     async def __pot(self, ctx):
-        ID = str(ctx.author.id)
-        if not inGameCheck(ID):
-            await ctx.send("Can't use this command now.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
-        await ctx.send("The pot contains $" + str(main.pot))
+
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
+            return
+
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
+            return
+        await ctx.send(ctx.author.mention + " the pot contains $" + str(GAME.pot))
 
     @commands.command(description="Check the current highest bet.",
                       brief="Check the current highest bet",
                       name='highest',
                       pass_context=True)
     async def __highest(self, ctx):
-        ID = str(ctx.author.id)
-        if not inGameCheck(ID):
-            await ctx.send("Can't use this command now.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
-        await ctx.send("The current highest bet is $" + str(main.maxBet))
 
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
+            return
+
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
+            return
+        await ctx.send(ctx.author.mention + " the current highest bet is $" + str(GAME.maxBet))
 
 def setup(bot):
     bot.add_cog(Betting(bot))

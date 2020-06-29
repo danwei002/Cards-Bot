@@ -14,12 +14,12 @@ import io
 from timeit import default_timer as timer
 from PIL import Image, ImageDraw, ImageColor
 import main
-from main import client, dumpData, loadData, gameDraw, showHand
+from main import *
 
-def betCheck():
+def betCheck(GAME):
     needToMatch = []
-    for ID, bet in main.bets.items():
-        if bet < main.maxBet:
+    for ID, bet in GAME.bets.items():
+        if bet < GAME.maxBet:
             needToMatch.append(ID)
     return needToMatch
 
@@ -29,23 +29,24 @@ class Poker(commands.Cog):
                       brief="Deal next card in Poker",
                       pass_context=True)
     async def next(self, ctx):
-        if not main.gameStarted:
-            await ctx.send("No game is active.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
 
-        if not main.gameUnderway:
-            await ctx.send("The game is not yet underway.")
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
             return
 
-        if main.players.count(str(ctx.author.id)) <= 0:
-            await ctx.send("You are not in this game.")
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
             return
 
-        if main.currentGame != "POKER":
-            await ctx.send("This command is only for POKER games.")
+        if not GAME.gameType == "Texas Hold 'Em":
+            await ctx.send("This command is only for Texas Hold 'Em")
             return
 
-        needToMatch = betCheck()
+        needToMatch = betCheck(GAME)
         if len(needToMatch):
             await ctx.send("All players must either match the highest bet or fold.\nPlayers who still must take action:")
             for ID in needToMatch:
@@ -53,32 +54,33 @@ class Poker(commands.Cog):
             return
 
         me = client.get_user(716357127739801711)
-        gameDraw(me, 1)
+        GAME.gameDraw(me, 1)
         dumpData()
-        await ctx.send("**CARD DEALT: " + str(len(main.hands[str(me.id)])) + "/5**", file=showHand(me))
+        await ctx.send("**CARD DEALT**", file=showHand(me, GAME.communityCards))
 
     @commands.command(description="Show the community cards.",
                       brief="Show the community cards",
                       pass_context=True)
     async def cards(self, ctx):
-        if not main.gameStarted:
-            await ctx.send("No game is active.")
+        if not checkInGame(ctx.author):
+            await ctx.send("Cannot use this command now.")
             return
 
-        if not main.gameUnderway:
-            await ctx.send("The game is not yet underway.")
+        GAME = getGame(ctx.author)
+        if not channelCheck(GAME, ctx.channel):
+            await ctx.send("You are not in the specified game's channel. Please go there.")
             return
 
-        if main.players.count(str(ctx.author.id)) <= 0:
-            await ctx.send("You are not in this game.")
+        if not GAME.gameUnderway:
+            await ctx.send("This game is not yet underway.")
             return
 
-        if main.currentGame != "POKER":
-            await ctx.send("This command is only for POKER games.")
+        if not GAME.gameType == "Texas Hold 'Em":
+            await ctx.send("This command is only for Texas Hold 'Em")
             return
 
         me = client.get_user(716357127739801711)
-        await ctx.send(file=showHand(me))
+        await ctx.send(file=showHand(me, GAME.communityCards))
 
 def setup(bot):
     bot.add_cog(Poker(bot))

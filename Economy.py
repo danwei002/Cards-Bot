@@ -4,7 +4,7 @@ from discord.ext import commands
 import discord.ext.commands
 from discord.ext.commands import Bot, has_permissions, CheckFailure
 import main
-from main import client, dumpData, loadData, gameDraw, showHand
+from main import client, dumpData, loadData, showHand
 
 class Economy(commands.Cog):
     @commands.command(description="Check user balance.",

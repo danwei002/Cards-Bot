@@ -1,36 +1,17 @@
 # CARDS BOT
 import random
-import requests
-import json
-import asyncio
-import discord.ext.commands
 import discord
-import re
-import sys
-import io
 
+from abc import abstractmethod
 from CardEval import evaluateHand, handType
-from sortingOrders import order, presOrder, pokerOrder, suitOrder
-from io import BytesIO
-from discord.ext.commands import Bot, has_permissions, CheckFailure
-from discord.ext.tasks import loop
-from PIL import Image, ImageDraw, ImageColor, ImageFont
-from discord.ext import tasks
-from random import randrange
-from discord.ext import commands
 
 class Game:
-    def __init__(self, gameType, channel, ID):
-        from main import deck
+    def __init__(self, channel, ID):
         self.gameUnderway = False
-        self.ID = ID
-        self.gameType = gameType
+        self.channel = channel
         self.gameEnded = False
-        self.communityCards = []
+        self.ID = ID
         self.players = []
-        self.bets = {}
-        self.maxBet = 0
-        self.pot = 0
         self.DECK = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
                      "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
                      "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
@@ -41,7 +22,6 @@ class Game:
                      "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
                      "deck/QH.png", "deck/QS.png",
                      "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
-        self.channel = channel
 
     def checkEnded(self):
         return self.gameEnded
@@ -54,7 +34,28 @@ class Game:
             return True
         return False
 
-    def gameDraw(self, user: discord.Member, numCards: int):
+    @abstractmethod
+    def deal(self, user: discord.Member, numCards: int):
+        return
+
+    @abstractmethod
+    async def startGame(self):
+        return
+
+    @abstractmethod
+    async def gameLoop(self):
+        return
+
+
+class TexasHoldEm(Game):
+    def __init__(self, channel, ID):
+        super().__init__(channel, ID)
+        self.pot = 0
+        self.bets = {}
+        self.maxBet = 0
+        self.communityCards = []
+
+    def deal(self, user: discord.Member, numCards: int):
         from main import loadData, dumpData
         if user.id == 716357127739801711:
             for i in range(0, numCards):
@@ -67,30 +68,63 @@ class Game:
             if str(user.id) not in main.hands:
                 main.hands.update({str(user.id): []})
             for i in range(0, numCards):
-
                 selectCard = random.choice(self.DECK)
                 main.hands[str(user.id)].append(selectCard)
                 self.DECK.remove(selectCard)
             dumpData()
 
+    async def gameLoop(self):
+        if len(self.communityCards) == 5:
+            self.endGame()
+
+        if self.gameEnded:
+            import main
+            from main import loadData, dumpData, client, showHand
+            loadData()
+            await self.channel.send("Game " + str(self.ID) + " ended. Revealing all players' hands...")
+            score = {}
+            overallMax = 0
+            for ID in self.players:
+                user = client.get_user(int(ID))
+                maxScore = 0
+                for i in range(0, 5):
+                    for j in range(i + 1, 5):
+                        for k in range(j + 1, 5):
+                            cardVals = [main.hands[str(user.id)][0], main.hands[str(user.id)][1], self.communityCards[i], self.communityCards[j], self.communityCards[k]]
+                            maxScore = max(maxScore, evaluateHand(cardVals))
+
+                score.update({maxScore: ID})
+                overallMax = max(maxScore, overallMax)
+                await self.channel.send("**" + user.name + " has a " + handType(maxScore) + ". Score of " + str(maxScore) + "**", file=showHand(user, main.hands[str(ID)]))
+                del main.hands[str(ID)]
+
+            await self.channel.send("The winner is " + client.get_user(int(score[overallMax])).mention + ", winning the pot of $" + str(self.pot))
+            main.money[score[overallMax]] += self.pot
+            dumpData()
+            main.gameList.remove(self)
+
     async def startGame(self):
         from main import loadData, dumpData, client, showHand
         loadData()
-        if self.gameType == "Texas Hold 'Em":
-            loadData()
-            output = "Game started. Ante is $50\nIn this game:\n"
-            self.gameUnderway = True
-            self.gameDraw(client.get_user(716357127739801711), 3)
-            self.maxBet = 50
-            for ID in self.players:
-                import main
-                user = client.get_user(int(ID))
-                output += user.mention + "\n"
-                self.gameDraw(user, 2)
-                self.bets.update({ID: 50})
-                main.money[ID] -= 50
-                self.pot += 50
+        output = "Game started. Ante is $50\nIn this game:\n"
+        self.gameUnderway = True
+        self.deal(client.get_user(716357127739801711), 3)
+        self.maxBet = 50
+        for ID in self.players:
+            import main
+            user = client.get_user(int(ID))
+            output += user.mention + "\n"
+            self.deal(user, 2)
+            self.bets.update({ID: 50})
+            main.money[ID] -= 50
+            self.pot += 50
 
-            await self.channel.send(output)
-            await self.channel.send("**Community Cards**", file=showHand(client.get_user(716357127739801711), self.communityCards))
-            dumpData()
+        await self.channel.send(output)
+        await self.channel.send("**Community Cards**",
+                                file=showHand(client.get_user(716357127739801711), self.communityCards))
+        dumpData()
+
+
+
+
+

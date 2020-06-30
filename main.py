@@ -8,12 +8,10 @@ import discord
 import re
 import Game
 
-
-from CardEval import evaluateHand, handType
-from Game import Game
+from Game import Game, TexasHoldEm
 from sortingOrders import order, presOrder, pokerOrder, suitOrder
 from io import BytesIO
-from discord.ext.commands import Bot, has_permissions, CheckFailure
+from discord.ext.commands import Bot, has_permissions
 from discord.ext.tasks import loop
 from PIL import Image, ImageDraw, ImageColor, ImageFont
 from random import randrange
@@ -32,6 +30,7 @@ cardHeight = 210
 # Data storage
 hands = {}
 userSortType = {}
+money = {}
 handColors = {}
 players = []
 
@@ -380,14 +379,14 @@ async def game(ctx):
             ID = randrange(100000, 1000000)
             while hasGame(ID):
                 ID = randrange(100000, 1000000)
-            GAME = Game("Texas Hold 'Em", ctx.channel, ID)
+            GAME = TexasHoldEm(ctx.channel, ID)
             gameList.append(GAME)
             await ctx.send("A Texas Hold 'Em game has been created with ID " + str(ID) + ". Use %join " + str(ID) + " to join this game.")
         elif str(rxn[0].emoji) == emoji2:
             ID = randrange(100000, 1000000)
             while hasGame(ID):
                 ID = randrange(100000, 1000000)
-            GAME = Game("Five Card Draw", ctx.channel, ID)
+            GAME = Game(ctx.channel, ID)
             gameList.append(GAME)
             await ctx.send("A Five Card Draw game has been created with ID " + str(ID) + ". Use %join " + str(ID) + " to join this game.")
 
@@ -487,35 +486,7 @@ async def reset_error(ctx, error):
 @loop(seconds=1)
 async def gameLoop():
     for GAME in gameList:
-        if GAME.gameType == "Texas Hold 'Em":
-            if len(GAME.communityCards) == 5:
-                GAME.endGame()
-
-        if GAME.checkEnded():
-            loadData()
-            await GAME.channel.send("All cards dealt, revealing all players' hands...")
-
-            score = {}
-            overallMax = 0
-            for ID in GAME.players:
-                user = client.get_user(int(ID))
-                community = GAME.communityCards
-                maxScore = 0
-                for i in range(0, 5):
-                    for j in range(i + 1, 5):
-                        for k in range(j + 1, 5):
-                            cardVals = [hands[str(user.id)][0], hands[str(user.id)][1], community[i], community[j], community[k]]
-                            maxScore = max(maxScore, evaluateHand(cardVals))
-
-                score.update({maxScore: ID})
-                overallMax = max(maxScore, overallMax)
-                await GAME.channel.send("**" + user.name + " has a " + handType(maxScore) + ". Score of " + str(maxScore) + "**", file=showHand(user, hands[str(user.id)]))
-
-            await GAME.channel.send("The winner is " + client.get_user(int(score[overallMax])).mention + ", winning the pot of $" + str(GAME.pot))
-            money[score[overallMax]] += GAME.pot
-
-            dumpData()
-            gameList.remove(GAME)
+        await GAME.gameLoop()
 
 
 @client.event

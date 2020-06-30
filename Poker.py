@@ -42,7 +42,7 @@ class Poker(commands.Cog):
             await ctx.send("This game is not yet underway.")
             return
 
-        if not GAME.gameType == "Texas Hold 'Em":
+        if not isinstance(GAME, TexasHoldEm):
             await ctx.send("This command is only for Texas Hold 'Em")
             return
 
@@ -54,7 +54,7 @@ class Poker(commands.Cog):
             return
 
         me = client.get_user(716357127739801711)
-        GAME.gameDraw(me, 1)
+        GAME.deal(me, 1)
         dumpData()
         await ctx.send("**CARD DEALT**", file=showHand(me, GAME.communityCards))
 
@@ -75,7 +75,7 @@ class Poker(commands.Cog):
             await ctx.send("This game is not yet underway.")
             return
 
-        if not GAME.gameType == "Texas Hold 'Em":
+        if not isinstance(GAME, TexasHoldEm):
             await ctx.send("This command is only for Texas Hold 'Em")
             return
 

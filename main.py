@@ -137,8 +137,6 @@ deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png
 
 drawDeck = deck
 
-
-
 def drawCard(user: discord.Member):
     selectCard = random.choice(cardChoices)
     selectSuit = random.choice(suits)
@@ -356,11 +354,9 @@ async def game(ctx):
         return
 
     emoji1 = '1️⃣'
-    emoji2 = '2️⃣'
-    msg = await ctx.send("**           CHOOSE GAME**\n**-------------------------------**\n**REACT WITH:\n" + emoji1 + " - Texas Hold 'Em**\n" + emoji2 + "** - Five-Card Draw**\n**-------------------------------**\n")
+    msg = await ctx.send("**           CHOOSE GAME**\n**-------------------------------**\n**REACT WITH:\n" + emoji1 + " - Texas Hold 'Em**\n**-------------------------------**\n")
 
     await msg.add_reaction(emoji1)
-    await msg.add_reaction(emoji2)
 
     rxn = None
 
@@ -382,13 +378,6 @@ async def game(ctx):
             GAME = TexasHoldEm(ctx.channel, ID)
             gameList.append(GAME)
             await ctx.send("A Texas Hold 'Em game has been created with ID " + str(ID) + ". Use %join " + str(ID) + " to join this game.")
-        elif str(rxn[0].emoji) == emoji2:
-            ID = randrange(100000, 1000000)
-            while hasGame(ID):
-                ID = randrange(100000, 1000000)
-            GAME = Game(ctx.channel, ID)
-            gameList.append(GAME)
-            await ctx.send("A Five Card Draw game has been created with ID " + str(ID) + ". Use %join " + str(ID) + " to join this game.")
 
 
 @client.command(description="Join a game that is not yet underway.",
@@ -421,6 +410,26 @@ async def join(ctx, ID: int):
 
     await ctx.send(ctx.author.mention + " you joined game " + str(ID))
     dumpData()
+
+
+@client.command(description="Leave a game you joined (forfeits any bets made if the game was already underway).",
+                brief="Leave a game you joined and forfeit any bets made if the game was already underway",
+                pass_context=True)
+async def leave(ctx):
+    if not checkInGame(ctx.author):
+        await ctx.send("You did not join any games.")
+        return
+
+    GAME = getGame(ctx.author)
+    if not channelCheck(GAME, ctx.channel):
+        await ctx.send("You are not in the specified game's channel. Please go there.")
+        return
+
+    GAME.players.remove(str(ctx.author.id))
+    loadData()
+    del hands[str(ctx.author.id)]
+    dumpData()
+    await ctx.send(ctx.author.mention + " you left game " + str(GAME.ID))
 
 
 @client.command(description="Start the game.",

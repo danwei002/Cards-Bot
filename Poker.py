@@ -18,9 +18,9 @@ from main import *
 
 def betCheck(GAME):
     needToMatch = []
-    for ID, bet in GAME.bets.items():
-        if bet < GAME.maxBet:
-            needToMatch.append(ID)
+    for player, status in GAME.playerStatus.items():
+        if status == "Active":
+            needToMatch.append(player)
     return needToMatch
 
 
@@ -44,6 +44,10 @@ class Poker(commands.Cog):
 
         if not isinstance(GAME, TexasHoldEm):
             await ctx.send("This command is only for Texas Hold 'Em")
+            return
+
+        if GAME.playerStatus[str(ctx.author.id)] == "Fold":
+            await ctx.send(ctx.author.mention + " you are not participating in this hand, please wait for the next hand to start.")
             return
 
         needToMatch = betCheck(GAME)

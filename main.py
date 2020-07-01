@@ -206,11 +206,12 @@ def showHand(user, userHand):
         HAND.paste(card, (10 + int(cardWidth / 3) * i, 60))
         DRAW.text((30 + int(cardWidth / 3) * i, 275), str(i), fill=ImageColor.getrgb("#ffffff"), font=font)
 
-    HAND.save('hand.png', format='PNG')
-    file = discord.File(open('hand.png', 'rb'))
-    dumpData()
-    return file
-
+    with BytesIO() as img:
+        HAND.save(img, 'PNG')
+        img.seek(0)
+        file = discord.File(fp=img, filename='hnd.png')
+        dumpData()
+        return file
 
 def sortHand(user: discord.Member, HAND):
     global hands
@@ -400,11 +401,14 @@ async def join(ctx, ID: int):
         await ctx.send("You are not in the specified game's channel. Please go there.")
         return
 
-    if getGameByID(ID).gameUnderway:
-        await ctx.send("This game is already underway.")
+    GAME = getGameByID(ID)
+    if GAME.gameUnderway:
+        await ctx.send("This game is already underway. You will be joined in for the next hand.")
+        GAME.players.append(str(ctx.author.id))
+        GAME.playerStatus.update({str(ctx.author.id): "Fold"})
         return
 
-    getGameByID(ID).players.append(str(ctx.author.id))
+    GAME.players.append(str(ctx.author.id))
     if str(ctx.author.id) in hands:
         del hands[str(ctx.author.id)]
 
@@ -427,7 +431,8 @@ async def leave(ctx):
 
     GAME.players.remove(str(ctx.author.id))
     loadData()
-    del hands[str(ctx.author.id)]
+    if str(ctx.author.id) in hands:
+        del hands[str(ctx.author.id)]
     dumpData()
     await ctx.send(ctx.author.mention + " you left game " + str(GAME.ID))
 

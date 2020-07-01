@@ -5,14 +5,7 @@ import discord
 from abc import abstractmethod
 from CardEval import evaluateHand, handType
 
-class Game:
-    def __init__(self, channel, ID):
-        self.gameUnderway = False
-        self.channel = channel
-        self.gameEnded = False
-        self.ID = ID
-        self.players = []
-        self.DECK = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
+DECK_CONST = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
                      "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
                      "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
                      "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
@@ -22,6 +15,15 @@ class Game:
                      "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
                      "deck/QH.png", "deck/QS.png",
                      "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
+
+class Game:
+    def __init__(self, channel, ID):
+        self.gameUnderway = False
+        self.channel = channel
+        self.gameEnded = False
+        self.ID = ID
+        self.players = []
+        self.DECK = DECK_CONST
 
     def checkEnded(self):
         return self.gameEnded
@@ -54,6 +56,7 @@ class TexasHoldEm(Game):
         self.bets = {}
         self.maxBet = 0
         self.communityCards = []
+        self.playerStatus = {}
 
     def deal(self, user: discord.Member, numCards: int):
         from main import loadData, dumpData
@@ -73,7 +76,54 @@ class TexasHoldEm(Game):
                 self.DECK.remove(selectCard)
             dumpData()
 
+    def updateStatus(self):
+        for ID, bet in self.bets.items():
+            if self.playerStatus[ID] == "Fold":
+                continue
+            if bet == self.maxBet:
+                self.playerStatus[ID] = "Called"
+            else:
+                self.playerStatus[ID] = "Active"
+
+    async def newHand(self):
+        from main import loadData, dumpData, client, showHand
+        import main
+        self.gameEnded = False
+        loadData()
+        self.DECK = DECK_CONST
+        self.pot = 0
+        self.communityCards.clear()
+        self.deal(client.get_user(716357127739801711), 3)
+        await self.channel.send(
+            "**------------------------------**\n**Starting new hand.**\n**------------------------------**\n")
+        await self.channel.send("**Community Cards**",
+                                file=showHand(client.get_user(716357127739801711), self.communityCards))
+        for ID in self.players:
+            self.playerStatus[ID] = "Active"
+            if ID not in self.bets:
+                self.bets.update({ID: 50})
+            else:
+                self.bets[ID] = 50
+            if main.money[ID] < 50:
+                await self.channel.send(client.get_user(int(ID)).mention + " you cannot afford to play a new hand.")
+                del self.players[ID]
+
+            main.money[ID] -= 50
+            self.maxBet = 50
+            self.pot += 50
+            self.deal(client.get_user(int(ID)), 2)
+
+        dumpData()
+
     async def gameLoop(self):
+        self.updateStatus()
+
+        if len(self.players) == 0 and self.gameUnderway:
+            await self.channel.send("No players left in this game. Ending game " + str(self.ID))
+            import main
+            main.gameList.remove(self)
+            return
+
         if len(self.communityCards) == 5:
             self.endGame()
 
@@ -85,6 +135,10 @@ class TexasHoldEm(Game):
             score = {}
             overallMax = 0
             for ID in self.players:
+                if self.playerStatus[ID] == "Fold":
+                    if str(ID) in main.hands:
+                        del main.hands[str(ID)]
+                    continue
                 user = client.get_user(int(ID))
                 maxScore = 0
                 for i in range(0, 5):
@@ -101,28 +155,15 @@ class TexasHoldEm(Game):
             await self.channel.send("The winner is " + client.get_user(int(score[overallMax])).mention + ", winning the pot of $" + str(self.pot))
             main.money[score[overallMax]] += self.pot
             dumpData()
-            main.gameList.remove(self)
+            await self.newHand()
 
     async def startGame(self):
-        from main import loadData, dumpData, client, showHand
-        loadData()
         output = "Game started. Ante is $50\nIn this game:\n"
         self.gameUnderway = True
-        self.deal(client.get_user(716357127739801711), 3)
-        self.maxBet = 50
-        for ID in self.players:
-            import main
-            user = client.get_user(int(ID))
-            output += user.mention + "\n"
-            self.deal(user, 2)
-            self.bets.update({ID: 50})
-            main.money[ID] -= 50
-            self.pot += 50
-
         await self.channel.send(output)
-        await self.channel.send("**Community Cards**",
-                                file=showHand(client.get_user(716357127739801711), self.communityCards))
-        dumpData()
+        await self.newHand()
+
+
 
 
 

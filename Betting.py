@@ -33,6 +33,10 @@ class Betting(commands.Cog):
             await ctx.send("Does not beat the current highest bet.")
             return
 
+        if GAME.playerStatus[ID] == "Fold":
+            await ctx.send(ctx.author.mention + " you are not participating in this hand, please wait for the next hand to start.")
+            return
+
         GAME.bets[ID] += raiseBy
         main.money[ID] -= raiseBy
         GAME.maxBet = GAME.bets[ID]
@@ -64,6 +68,10 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             await ctx.send("This game is not yet underway.")
+            return
+
+        if GAME.playerStatus[ID] == "Fold":
+            await ctx.send(ctx.author.mention + " you are not participating in this hand, please wait for the next hand to start.")
             return
 
         if str(ID) in GAME.bets:
@@ -107,9 +115,7 @@ class Betting(commands.Cog):
             await ctx.send("This game is not yet underway.")
             return
 
-        GAME.players.remove(ID)
-        del GAME.bets[ID]
-
+        GAME.playerStatus[ID] = "Fold"
         await ctx.send(ctx.author.mention + " you have folded.")
 
     @commands.command(description="View the money in the pot.",

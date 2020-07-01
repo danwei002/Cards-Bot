@@ -32,7 +32,6 @@ hands = {}
 userSortType = {}
 money = {}
 handColors = {}
-players = []
 
 gameList = []
 
@@ -40,62 +39,95 @@ gameList = []
 async def on_ready():
     loadData()
     hands.clear()
-    players.clear()
     gameLoop.start()
     print("Now online.")
 
-
+# Check if a user in participating in a game
 def checkInGame(user: discord.Member):
     for GAME in gameList:
         if GAME.hasPlayer(user):
             return True
     return False
 
+# Get a Game object by its 6-digit ID
 def getGameByID(ID):
     for GAME in gameList:
         if GAME.ID == ID:
             return GAME
 
+# Check if a Game object exists given a 6-digit ID
 def hasGame(ID):
     for GAME in gameList:
         if GAME.ID == ID:
             return True
     return False
 
+# Get a Game object that the user is participating in
 def getGame(user: discord.Member):
     for GAME in gameList:
         if GAME.hasPlayer(user):
             return GAME
 
+# Check if message and game channel match
 def channelCheck(GAME, CHANNEL):
     return GAME.channel == CHANNEL
 
-# Load user hands
+# Load all data
 def loadData():
     global hands, userSortType, players, handColors, money
     with open('hands.json') as hFile:
         hands = json.load(hFile)
     with open('sortType.json') as sTFile:
         userSortType = json.load(sTFile)
-    with open('players.json') as pFile:
-        players = json.load(pFile)
     with open('handColors.json') as hCFile:
         handColors = json.load(hCFile)
     with open('econ.json') as eFile:
         money = json.load(eFile)
 
+def loadHands():
+    global hands
+    with open('hands.json') as hFile:
+        hands = json.load(hFile)
 
-# Dump user hands
+def loadPreferences():
+    global userSortType, handColors
+    with open('sortType.json') as sTFile:
+        userSortType = json.load(sTFile)
+    with open('handColors.json') as hCFile:
+        handColors = json.load(hCFile)
+
+def loadEconomy():
+    global money
+    with open('econ.json') as eFile:
+        money = json.load(eFile)
+
+
+# Dump all data
 def dumpData():
     global hands, userSortType, players, handColors, money
     with open('hands.json', 'w') as hFile:
         json.dump(hands, hFile)
     with open('sortType.json', 'w') as sTFile:
         json.dump(userSortType, sTFile)
-    with open('players.json', 'w') as pFile:
-        json.dump(players, pFile)
     with open('handColors.json', 'w') as hCFile:
         json.dump(handColors, hCFile)
+    with open('econ.json', 'w') as eFile:
+        json.dump(money, eFile)
+
+def dumpHands():
+    global hands
+    with open('hands.json', 'w') as hFile:
+        json.dump(hands, hFile)
+
+def dumpPreferences():
+    global userSortType, handColors
+    with open('sortType.json', 'w') as sTFile:
+        json.dump(userSortType, sTFile)
+    with open('handColors.json', 'w') as hCFile:
+        json.dump(handColors, hCFile)
+
+def dumpEconomy():
+    global money
     with open('econ.json', 'w') as eFile:
         json.dump(money, eFile)
 
@@ -111,19 +143,18 @@ def addCard(user: discord.Member, card: str):
 
 # Reset all game data and variables
 def resetData():
-    global gameUnderway, gameStarted, players, hands
-    gameStarted = False
-    gameUnderway = False
+    global hands
     hands.clear()
-    players.clear()
 
 
 # Card generator
 cardChoices = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 suits = ['C', 'D', 'H', 'S']
 
+# Card ordering dictionary
 ORDER = order
 
+# Deck constant
 deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
         "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
         "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
@@ -135,22 +166,14 @@ deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png
         "deck/QH.png", "deck/QS.png",
         "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
 
+# Drawing cards deck
 drawDeck = deck
 
-def drawCard(user: discord.Member):
-    selectCard = random.choice(cardChoices)
-    selectSuit = random.choice(suits)
-    imgName = "deck/" + selectCard + selectSuit + ".png"
-    addCard(user, imgName)
-    card = Image.open(str(imgName))
-    card = card.resize((69, 105))
-    return card
-
-
+# Return a discord File object representing the user's hand
 def showHand(user, userHand):
-    loadData()
-
+    loadHands()
     userHand = sortHand(user, userHand)
+
     # Get user PFP
     pfpUrl = user.avatar_url
     headers = {'User-Agent': 'CardsBot'}
@@ -210,18 +233,21 @@ def showHand(user, userHand):
         HAND.save(img, 'PNG')
         img.seek(0)
         file = discord.File(fp=img, filename='hnd.png')
-        dumpData()
+        dumpHands()
         return file
 
+# Sort user's hand based on their preferred sorting style
 def sortHand(user: discord.Member, HAND):
     global hands
     global ORDER, presOrder, suitOrder, order
     h = []
-    loadData()
+    loadPreferences()
+    loadHands()
     if str(user.id) not in userSortType:
         userSortType.update({str(user.id): 'd'})
 
-    dumpData()
+    dumpPreferences()
+    dumpHands()
 
     if userSortType[str(user.id)] == 'p':
         ORDER = presOrder
@@ -244,27 +270,31 @@ def sortHand(user: discord.Member, HAND):
     return h
 
 
+"""
+Commands Start Here
+"""
+
 @client.command(description="Generate a random card. Duplicates can appear.",
                 brief="Generate a random card",
                 pass_context=True)
 async def rc(ctx):
-    loadData()
-    if checkInGame(ctx.author):
-        await ctx.send("Cannot use this command while in a game.")
-        return
-
-    card = drawCard(ctx.author)
-    card.save('drawn.png', format='PNG')
-    file = discord.File(open('drawn.png', 'rb'))
-    dumpData()
-    await ctx.send(ctx.author.mention, file=file)
+    selectCard = random.choice(cardChoices)
+    selectSuit = random.choice(suits)
+    imgName = "deck/" + selectCard + selectSuit + ".png"
+    card = Image.open(str(imgName))
+    card = card.resize((69, 105))
+    with BytesIO() as img:
+        card.save(img, 'PNG')
+        img.seek(0)
+        file = discord.File(fp=img, filename='hnd.png')
+        await ctx.send(ctx.author.mention, file=file)
 
 
 @client.command(description="Pull a number of random cards from the deck. Pulled cards cannot be pulled a second time unless the deck is reset.",
                 brief="Draw a number of cards from the deck",
                 pass_context=True)
 async def draw(ctx, cards: int = 1):
-    loadData()
+    loadHands()
 
     if checkInGame(ctx.author):
         await ctx.send("Cannot use this command while in a game.")
@@ -279,7 +309,7 @@ async def draw(ctx, cards: int = 1):
         drawDeck.remove(cardName)
         addCard(ctx.author, cardName)
     await ctx.send("You have received your cards " + ctx.author.mention)
-    dumpData()
+    dumpHands()
 
 
 @client.command(description="Refill the deck",
@@ -308,7 +338,7 @@ async def refill(ctx):
                 brief="View your hand",
                 pass_context=True)
 async def hand(ctx):
-    loadData()
+    loadHands()
     if str(ctx.author.id) not in hands:
         await ctx.send("You have no cards in your hand " + ctx.author.mention)
         return
@@ -321,7 +351,7 @@ async def hand(ctx):
                 aliases=['ss'],
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
-    loadData()
+    loadPreferences()
     global order, presOrder, ORDER
     if sortType is None:
         await ctx.send("Invalid sorting type detected. Try 'p', 's', or 'd'.")
@@ -341,7 +371,7 @@ async def setSort(ctx, sortType: str = None):
         userSortType[str(ctx.author.id)] = sortType
     else:
         userSortType.update({str(ctx.author.id): sortType})
-    dumpData()
+    dumpPreferences()
 
 
 @client.command(description="Start a game.",
@@ -349,7 +379,7 @@ async def setSort(ctx, sortType: str = None):
                 aliases=['5card'],
                 pass_context=True)
 async def game(ctx):
-    global gameList, gameIndex
+    global gameList
     if checkInGame(ctx.author):
         await ctx.send("You are already in a game.")
         return
@@ -402,6 +432,8 @@ async def join(ctx, ID: int):
         return
 
     GAME = getGameByID(ID)
+    if str(ctx.author.id) in hands:
+        del hands[str(ctx.author.id)]
     if GAME.gameUnderway:
         await ctx.send("This game is already underway. You will be joined in for the next hand.")
         GAME.players.append(str(ctx.author.id))
@@ -409,9 +441,6 @@ async def join(ctx, ID: int):
         return
 
     GAME.players.append(str(ctx.author.id))
-    if str(ctx.author.id) in hands:
-        del hands[str(ctx.author.id)]
-
     await ctx.send(ctx.author.mention + " you joined game " + str(ID))
     dumpData()
 
@@ -430,10 +459,10 @@ async def leave(ctx):
         return
 
     GAME.players.remove(str(ctx.author.id))
-    loadData()
+    loadHands()
     if str(ctx.author.id) in hands:
         del hands[str(ctx.author.id)]
-    dumpData()
+    dumpHands()
     await ctx.send(ctx.author.mention + " you left game " + str(GAME.ID))
 
 
@@ -483,9 +512,9 @@ async def setColor(ctx, colour: str):
                 pass_context=True)
 @has_permissions(administrator=True)
 async def reset(ctx):
-    loadData()
+    loadHands()
     hands.clear()
-    dumpData()
+    dumpHands()
     await ctx.send("All user hands have been reset.")
 
 
@@ -510,8 +539,7 @@ async def on_message(msg):
 
     if str(msg.author.id) not in money:
         money.update({str(msg.author.id): 10000})
-
-    dumpData()
+        dumpEconomy()
 
 
 client.load_extension('Poker')

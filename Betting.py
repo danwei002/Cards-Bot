@@ -2,7 +2,7 @@
 from discord.ext import commands
 
 import main
-from main import loadData, dumpData, checkInGame, getGame, channelCheck
+from main import loadEconomy, dumpEconomy, checkInGame, getGame, channelCheck
 
 class Betting(commands.Cog):
     @commands.command(description="Raise your bet.",
@@ -10,7 +10,7 @@ class Betting(commands.Cog):
                       name='raise',
                       pass_context=True)
     async def __raise(self, ctx, raiseBy: float):
-        loadData()
+        loadEconomy()
         ID = str(ctx.author.id)
         if not checkInGame(ctx.author):
             await ctx.send("Cannot use this command now.")
@@ -43,7 +43,7 @@ class Betting(commands.Cog):
         GAME.pot += raiseBy
         await ctx.send(ctx.author.mention + " you raised your bet to $" + str(GAME.bets[ID]))
 
-        dumpData()
+        dumpEconomy()
 
     @__raise.error
     async def raise_error(self, ctx, error):
@@ -55,7 +55,7 @@ class Betting(commands.Cog):
                       name='call',
                       pass_context=True)
     async def __call(self, ctx):
-        loadData()
+        loadEconomy()
         ID = str(ctx.author.id)
         if not checkInGame(ctx.author):
             await ctx.send("Cannot use this command now.")
@@ -93,14 +93,14 @@ class Betting(commands.Cog):
             GAME.bets[ID] = GAME.maxBet
             main.money[ID] -= GAME.maxBet
         await ctx.send(ctx.author.mention + " you matched a bet of $" + str(GAME.maxBet))
-        dumpData()
+        dumpEconomy()
 
     @commands.command(description="Forfeit your bet and lay down your hand.",
                       brief="Forfeit your bet",
                       name='fold',
                       pass_context=True)
     async def __fold(self, ctx):
-        loadData()
+        loadEconomy()
         ID = str(ctx.author.id)
         if not checkInGame(ctx.author):
             await ctx.send("Cannot use this command now.")

@@ -59,7 +59,7 @@ class Poker(commands.Cog):
 
         me = client.get_user(716357127739801711)
         GAME.deal(me, 1)
-        dumpData()
+        dumpHands()
         await ctx.send("**CARD DEALT**", file=showHand(me, GAME.communityCards))
 
     @commands.command(description="Show the community cards.",

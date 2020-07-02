@@ -8,6 +8,7 @@ class Betting(commands.Cog):
     @commands.command(description="Raise your bet.",
                       brief="Raise your bet",
                       name='raise',
+                      help="Raise your bet by a specified amount. Format for this command is %raise <amount>. Requires sufficient balance to use.",
                       pass_context=True)
     async def __raise(self, ctx, raiseBy: float):
         loadEconomy()
@@ -53,6 +54,7 @@ class Betting(commands.Cog):
     @commands.command(description="Call to the highest bet.",
                       brief="Call to the highest bet",
                       name='call',
+                      help="Match the current highest bet. Format is %call. No parameters are needed. Requires sufficient balance to use.",
                       pass_context=True)
     async def __call(self, ctx):
         loadEconomy()
@@ -98,6 +100,7 @@ class Betting(commands.Cog):
     @commands.command(description="Forfeit your bet and lay down your hand.",
                       brief="Forfeit your bet",
                       name='fold',
+                      help="Fold and forfeit, taking no further part in the hand. You will lose any amount you already bet. Format is %fold. No parameters are needed.",
                       pass_context=True)
     async def __fold(self, ctx):
         loadEconomy()
@@ -121,6 +124,7 @@ class Betting(commands.Cog):
     @commands.command(description="View the money in the pot.",
                       brief="View the money in the pot",
                       name='pot',
+                      help="See how much money is currently available to be won in the pot. Format is %pot. No parameters are needed.",
                       pass_context=True)
     async def __pot(self, ctx):
         if not checkInGame(ctx.author):
@@ -140,6 +144,7 @@ class Betting(commands.Cog):
     @commands.command(description="Check the current highest bet.",
                       brief="Check the current highest bet",
                       name='highest',
+                      help="Check what the current highest bet is. Format is %highest. No parameters are needed.",
                       pass_context=True)
     async def __highest(self, ctx):
         if not checkInGame(ctx.author):

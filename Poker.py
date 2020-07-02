@@ -25,8 +25,9 @@ def betCheck(GAME):
 
 
 class Poker(commands.Cog):
-    @commands.command(description="Deal next card in Poker",
-                      brief="Deal next card in Poker",
+    @commands.command(description="Deal next card in Texas Hold 'Em.",
+                      brief="Deal next card in Texas Hold 'Em",
+                      help="Deal the next community card in a game of Texas Hold 'Em. You must be participating in a hand of Texas Hold 'Em to use this command.",
                       pass_context=True)
     async def next(self, ctx):
         if not checkInGame(ctx.author):
@@ -64,6 +65,7 @@ class Poker(commands.Cog):
 
     @commands.command(description="Show the community cards.",
                       brief="Show the community cards",
+                      help="Show the current dealt community cards for a game of Texas Hold 'Em. You must be in a game of Texas Hold 'Em to use this command.",
                       pass_context=True)
     async def cards(self, ctx):
         if not checkInGame(ctx.author):

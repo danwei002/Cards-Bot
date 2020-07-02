@@ -9,6 +9,7 @@ from main import client, dumpData, loadData, showHand
 class Economy(commands.Cog):
     @commands.command(description="Check user balance.",
                       brief="Check user balance",
+                      help="Check a user's balance. Mention a user to check their balance, or none to check your own. Format is %bal <mention user/none>.",
                       pass_context=True)
     async def bal(self, ctx, user: discord.Member = None):
         loadData()
@@ -27,6 +28,8 @@ class Economy(commands.Cog):
 
     @commands.command(description="Set money for user. Requires administrator permissions.",
                       brief="Set money for user",
+                      help="Set the balance of a user to a specified value. Requires administrator permissions for use. Mention a user to"
+                           " set their balance. Format is %setbal <mention user> <balance amount>.",
                       pass_context=True)
     @has_permissions(administrator=True)
     async def setbal(self, ctx, user: discord.Member = None, amount: float = None):
@@ -55,6 +58,8 @@ class Economy(commands.Cog):
 
     @commands.command(description="Pay a user.",
                       brief="Pay a user",
+                      help="Pay a user from your own balance. You must have sufficient funds to pay the value you specified. Mention"
+                           " the user who you'd like to pay. Format is %pay <mention user> <payment amount>.",
                       pass_context=True)
     async def pay(self, ctx, user: discord.Member = None, amount: float = None):
         loadData()

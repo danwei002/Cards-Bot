@@ -30,63 +30,124 @@ class Poker(commands.Cog):
                       help="Deal the next community card in a game of Texas Hold 'Em. You must be participating in a hand of Texas Hold 'Em to use this command.",
                       pass_context=True)
     async def next(self, ctx):
+        embed = discord.Embed(colour=0x00ff00)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         if not checkInGame(ctx.author):
-            await ctx.send("Cannot use this command now.")
+            embed.description = "You are not in any games."
+            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            await ctx.send(embed=embed)
             return
 
         GAME = getGame(ctx.author)
         if not channelCheck(GAME, ctx.channel):
-            await ctx.send("You are not in the specified game's channel. Please go there.")
-            return
-
-        if not GAME.gameUnderway:
-            await ctx.send("This game is not yet underway.")
+            embed.description = "You are not in the specified game's channel. Please go there."
+            await ctx.send(embed=embed)
             return
 
         if not isinstance(GAME, TexasHoldEm):
-            await ctx.send("This command is only for Texas Hold 'Em")
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.description = "You are not in a Texas Hold 'Em game."
+            await ctx.send(embed=embed)
+            return
+
+        embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+        embed.title = "Texas Hold 'Em"
+        if not GAME.gameUnderway:
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.description = "This game has not started."
+            embed.set_footer(text="Use %start to start this game.")
+            await ctx.send(embed=embed)
             return
 
         if GAME.playerStatus[str(ctx.author.id)] == "Fold":
-            await ctx.send(ctx.author.mention + " you are not participating in this hand, please wait for the next hand to start.")
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.description = "You are not participating in this hand. Wait for the next hand to start."
+            await ctx.send(embed=embed)
             return
 
+        embed.set_author(name="", icon_url="")
+        embed.set_footer(text="Use %leave to leave this game.")
         needToMatch = betCheck(GAME)
+        me = client.get_user(716357127739801711)
+        file = showHand(ctx.author, GAME.communityCards)
+        embed.set_image(url="attachment://hand.png")
         if len(needToMatch):
-            await ctx.send("All players must either match the highest bet or fold.\nPlayers who still must take action:")
+            embed.description = "Not all players have matched the highest bet or folded."
+            playersToMatch = ""
             for ID in needToMatch:
-                await ctx.send(client.get_user(int(ID)).mention)
+                user = client.get_user(int(ID))
+                playersToMatch += user.name + "\n"
+
+            embed.add_field(name="Need to Call/Fold", value=playersToMatch)
+            embed.add_field(name="Pot", value="$" + str(GAME.pot))
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+            await ctx.send(file=file, embed=embed)
             return
 
-        me = client.get_user(716357127739801711)
         GAME.deal(me, 1)
-        dumpHands()
-        await ctx.send("**CARD DEALT**", file=showHand(me, GAME.communityCards))
+        file = showHand(ctx.author, GAME.communityCards)
+        embed.set_image(url="attachment://hand.png")
+        playerList = ""
+        for playerID in GAME.players:
+            user = client.get_user(int(playerID))
+            playerList += user.name + "\n"
+
+        embed.description = "Next card dealt."
+        embed.add_field(name="Players", value=playerList)
+        embed.add_field(name="Pot", value="$" + str(GAME.pot))
+        embed.add_field(name="Game ID", value=str(GAME.ID))
+        embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+        await ctx.send(file=file, embed=embed)
 
     @commands.command(description="Show the community cards.",
                       brief="Show the community cards",
                       help="Show the current dealt community cards for a game of Texas Hold 'Em. You must be in a game of Texas Hold 'Em to use this command.",
                       pass_context=True)
     async def cards(self, ctx):
+        embed = discord.Embed(colour=0x00ff00)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         if not checkInGame(ctx.author):
-            await ctx.send("Cannot use this command now.")
+            embed.description = "You are not in any games."
+            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            await ctx.send(embed=embed)
             return
 
         GAME = getGame(ctx.author)
         if not channelCheck(GAME, ctx.channel):
-            await ctx.send("You are not in the specified game's channel. Please go there.")
-            return
-
-        if not GAME.gameUnderway:
-            await ctx.send("This game is not yet underway.")
+            embed.description = "You are not in the specified game's channel. Please go there."
+            await ctx.send(embed=embed)
             return
 
         if not isinstance(GAME, TexasHoldEm):
-            await ctx.send("This command is only for Texas Hold 'Em")
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.description = "You are not in a Texas Hold 'Em game."
+            await ctx.send(embed=embed)
             return
 
-        me = client.get_user(716357127739801711)
-        await ctx.send(file=showHand(me, GAME.communityCards))
+        embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+        embed.title = "Texas Hold 'Em"
+        if not GAME.gameUnderway:
+            embed.add_field(name="Game ID", value=str(GAME.ID))
+            embed.description = "This game has not started."
+            embed.set_footer(text="Use %start to start this game.")
+            await ctx.send(embed=embed)
+            return
+
+        embed.set_author(name="", icon_url="")
+        file = showHand(ctx.author, GAME.communityCards)
+        embed.set_image(url="attachment://hand.png")
+        playerList = ""
+        for playerID in GAME.players:
+            user = client.get_user(int(playerID))
+            playerList += user.name + "\n"
+        embed.add_field(name="Players", value=playerList)
+        embed.add_field(name="Pot", value="$" + str(GAME.pot))
+        embed.add_field(name="Game ID", value=str(GAME.ID))
+        embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+        await ctx.send(file=file, embed=embed)
 
 def setup(bot):
     bot.add_cog(Poker(bot))

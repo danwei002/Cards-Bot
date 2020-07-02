@@ -550,12 +550,20 @@ async def join(ctx, ID: int):
         embed.description = "You join a game that was already underway. You will be joined in for the next hand."
         embed.add_field(name="Game ID", value=GAME.ID)
         GAME.players.append(str(ctx.author.id))
-        GAME.playerStatus.update({str(ctx.author.id): "Fold"})
+        if isinstance(GAME, TexasHoldEm):
+            GAME.playerStatus.update({str(ctx.author.id): "Fold"})
         await ctx.send(embed=embed)
         return
 
     GAME.players.append(str(ctx.author.id))
     embed.description = "You joined a game."
+
+    playerList = ""
+    for playerID in GAME.players:
+        user = client.get_user(int(playerID))
+        playerList += user.name + "\n"
+
+    embed.add_field(name="Players", value=playerList)
     embed.add_field(name="Game ID", value=GAME.ID)
     embed.set_thumbnail(url=GAME.imageUrl)
     await ctx.send(embed=embed)

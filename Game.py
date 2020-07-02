@@ -65,21 +65,16 @@ class TexasHoldEm(Game):
         self.playerStatus = {}
 
     def deal(self, user: discord.Member, numCards: int):
-        from main import loadHands, dumpHands
         if user.id == 716357127739801711:
             for i in range(0, numCards):
                 selectCard = random.choice(self.DECK)
                 self.communityCards.append(selectCard)
                 self.DECK.remove(selectCard)
         else:
-            loadHands()
-            import main
-
             for i in range(0, numCards):
                 selectCard = random.choice(self.DECK)
                 self.playerHands[str(user.id)].append(selectCard)
                 self.DECK.remove(selectCard)
-            dumpHands()
 
     def updateStatus(self):
         for ID, bet in self.bets.items():
@@ -91,7 +86,7 @@ class TexasHoldEm(Game):
                 self.playerStatus[ID] = "Active"
 
     async def newHand(self):
-        from main import loadData, loadHands, dumpEconomy, dumpHands, client, showHand
+        from main import loadData, dumpEconomy, client, showHand
         import main
         self.gameEnded = False
         self.playerHands.clear()
@@ -100,10 +95,13 @@ class TexasHoldEm(Game):
         self.pot = 0
         self.communityCards.clear()
         self.deal(client.get_user(716357127739801711), 3)
-        await self.channel.send(
-            "**------------------------------**\n**Starting new hand.**\n**------------------------------**\n")
-        await self.channel.send("**Community Cards**",
-                                file=showHand(client.get_user(716357127739801711), self.communityCards))
+
+        embed = discord.Embed(title="Texas Hold 'Em", description="Starting new hand. Ante is $50", colour=0x00ff00)
+        embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+        embed.set_footer(text="Use %leave to leave this game.")
+        file = showHand(client.get_user(716357127739801711), self.communityCards)
+        embed.set_image(url="attachment://hand.png")
+        playerList = ""
         for ID in self.players:
             self.playerHands.update({ID: []})
             self.playerStatus[ID] = "Active"
@@ -114,18 +112,28 @@ class TexasHoldEm(Game):
             if main.money[ID] < 50:
                 await self.channel.send(client.get_user(int(ID)).mention + " you cannot afford to play a new hand.")
                 self.players.remove(ID)
+                continue
 
+            user = client.get_user(int(ID))
+            playerList += user.name + "\n"
             self.maxBet = 50
             self.pot += 50
             self.deal(client.get_user(int(ID)), 2)
             main.money[ID] -= 50
             dumpEconomy()
+        embed.add_field(name="Players", value=playerList)
+        embed.add_field(name="Pot", value="$" + str(self.pot))
+        embed.add_field(name="Game ID", value=str(self.ID))
+        embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(self.communityCards)), inline=False)
+        await self.channel.send(file=file, embed=embed)
 
     async def gameLoop(self):
         self.updateStatus()
-
         if len(self.players) == 0 and self.gameUnderway:
-            await self.channel.send("No players left in game " + str(self.ID) + ". This game will now terminate.")
+            embed = discord.Embed(title="Texas Hold 'Em", description="No players left in game. This game will now terminate.", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+            await self.channel.send(embed=embed)
             import main
             main.gameList.remove(self)
             return
@@ -134,14 +142,20 @@ class TexasHoldEm(Game):
             self.endGame()
 
         if self.gameEnded:
+            embed = discord.Embed(title="Texas Hold 'Em", description="Round finished, revealing all player's hands...", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+            await self.channel.send(embed=embed)
             import main
             from main import loadData, dumpData, client, showHand
             loadData()
-            await self.channel.send("Round finished. Revealing all players' hands...")
             score = {}
             overallMax = 0
             for ID in self.players:
                 user = client.get_user(int(ID))
+                embed.title = user.name + "'s Hand"
+                embed.description = None
+
                 maxScore = 0
                 for i in range(0, 5):
                     for j in range(i + 1, 5):
@@ -151,15 +165,26 @@ class TexasHoldEm(Game):
 
                 score.update({maxScore: ID})
                 overallMax = max(maxScore, overallMax)
-                await self.channel.send("**" + user.name + " has combo: " + handType(maxScore) + ".**", file=showHand(user, self.playerHands[ID]))
+                file = showHand(user, self.playerHands[ID])
+                embed.set_image(url="attachment://hand.png")
+                embed.add_field(name="Combo", value=handType(maxScore))
+                await self.channel.send(file=file, embed=embed)
 
-            await self.channel.send("The winner is " + client.get_user(int(score[overallMax])).mention + ", winning the pot of $" + str(self.pot))
+            winner = client.get_user(int(score[overallMax]))
+            embed.title = "Texas Hold 'Em"
+            embed.description = "The winner is " + winner.name + ", winning the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumps up for yes, thumps down for no."
+            embed.set_thumbnail(url=winner.avatar_url)
+            embed.set_footer(text="Use %leave to leave this game.")
             main.money[score[overallMax]] += self.pot
             dumpData()
 
             confirmEmoji = '👍'
             quitEmoji = '👎'
-            msg = await self.channel.send("**Start next hand? Thumps up for yes, thumps down for no.**")
+
+            embed.remove_field(0)
+            embed.remove_field(0)
+            msg = await self.channel.send(embed=embed)
+            embed.set_thumbnail(TexasHoldEm.imageUrl)
             rxn = None
             await msg.add_reaction(confirmEmoji)
             await msg.add_reaction(quitEmoji)
@@ -170,9 +195,11 @@ class TexasHoldEm(Game):
                 return self.players.count(str(user.id)) > 0 and not user.bot
 
             try:
-                rxn = await client.wait_for('reaction_add', timeout=30.0, check=check)
+                rxn = await client.wait_for('reaction_add', timeout=5.0, check=check)
             except asyncio.TimeoutError:
-                await self.channel.send("Nobody chose in time. Game " + str(ID) + " terminated.")
+                embed.description = "Nobody chose in time. Game terminated."
+                embed.add_field(name="Game ID", value=str(self.ID))
+                await self.channel.send(embed=embed)
                 import main
                 main.gameList.remove(self)
                 return
@@ -180,13 +207,13 @@ class TexasHoldEm(Game):
                 if str(rxn[0].emoji) == confirmEmoji:
                     await self.newHand()
                 elif str(rxn[0].emoji) == quitEmoji:
-                    await self.channel.send("Game " + str(self.ID) + " terminated.")
+                    embed.description = "Game terminated."
+                    embed.add_field(name="Game ID", value=str(self.ID))
+                    await self.channel.send(embed=embed)
                     import main
                     main.gameList.remove(self)
                     return
 
     async def startGame(self):
-        output = "Game started. Ante is $50\nIn this game:\n"
         self.gameUnderway = True
-        await self.channel.send(output)
         await self.newHand()

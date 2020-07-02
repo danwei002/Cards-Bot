@@ -33,6 +33,7 @@ class Poker(commands.Cog):
         embed = discord.Embed(colour=0x00ff00)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
             embed.set_footer(text="Use %join <game ID> to join an existing game.")
@@ -40,6 +41,7 @@ class Poker(commands.Cog):
             return
 
         GAME = getGame(ctx.author)
+
         if not channelCheck(GAME, ctx.channel):
             embed.description = "You are not in the specified game's channel. Please go there."
             await ctx.send(embed=embed)
@@ -53,6 +55,7 @@ class Poker(commands.Cog):
 
         embed.set_thumbnail(url=TexasHoldEm.imageUrl)
         embed.title = "Texas Hold 'Em"
+
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
@@ -72,6 +75,7 @@ class Poker(commands.Cog):
         me = client.get_user(716357127739801711)
         file = showHand(ctx.author, GAME.communityCards)
         embed.set_image(url="attachment://hand.png")
+
         if len(needToMatch):
             embed.description = "Not all players have matched the highest bet or folded."
             playersToMatch = ""
@@ -83,13 +87,16 @@ class Poker(commands.Cog):
             embed.add_field(name="Pot", value="$" + str(GAME.pot))
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+
             await ctx.send(file=file, embed=embed)
             return
 
         GAME.deal(me, 1)
         file = showHand(ctx.author, GAME.communityCards)
         embed.set_image(url="attachment://hand.png")
+
         playerList = ""
+
         for playerID in GAME.players:
             user = client.get_user(int(playerID))
             playerList += user.name + "\n"
@@ -99,6 +106,7 @@ class Poker(commands.Cog):
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.add_field(name="Game ID", value=str(GAME.ID))
         embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+
         await ctx.send(file=file, embed=embed)
 
     @commands.command(description="Show the community cards.",
@@ -109,6 +117,7 @@ class Poker(commands.Cog):
         embed = discord.Embed(colour=0x00ff00)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
             embed.set_footer(text="Use %join <game ID> to join an existing game.")
@@ -116,6 +125,7 @@ class Poker(commands.Cog):
             return
 
         GAME = getGame(ctx.author)
+
         if not channelCheck(GAME, ctx.channel):
             embed.description = "You are not in the specified game's channel. Please go there."
             await ctx.send(embed=embed)
@@ -129,6 +139,7 @@ class Poker(commands.Cog):
 
         embed.set_thumbnail(url=TexasHoldEm.imageUrl)
         embed.title = "Texas Hold 'Em"
+
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
@@ -139,14 +150,18 @@ class Poker(commands.Cog):
         embed.set_author(name="", icon_url="")
         file = showHand(ctx.author, GAME.communityCards)
         embed.set_image(url="attachment://hand.png")
+
         playerList = ""
+
         for playerID in GAME.players:
             user = client.get_user(int(playerID))
             playerList += user.name + "\n"
+
         embed.add_field(name="Players", value=playerList)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.add_field(name="Game ID", value=str(GAME.ID))
         embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(GAME.communityCards)), inline=False)
+
         await ctx.send(file=file, embed=embed)
 
 def setup(bot):

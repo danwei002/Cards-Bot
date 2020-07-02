@@ -19,6 +19,7 @@ DECK_CONST = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/
 
 class Game:
     imageUrl = None
+    gameName = None
 
     def __init__(self, channel, ID):
         self.gameUnderway = False
@@ -55,6 +56,7 @@ class Game:
 
 class TexasHoldEm(Game):
     imageUrl = "https://i.imgur.com/1DDTG0z.png"
+    gameName = "Texas Hold 'Em"
 
     def __init__(self, channel, ID):
         super().__init__(channel, ID)
@@ -88,9 +90,12 @@ class TexasHoldEm(Game):
     async def newHand(self):
         from main import loadData, dumpEconomy, client, showHand
         import main
+
         self.gameEnded = False
         self.playerHands.clear()
+
         loadData()
+
         self.DECK = DECK_CONST
         self.pot = 0
         self.communityCards.clear()
@@ -101,6 +106,7 @@ class TexasHoldEm(Game):
         embed.set_footer(text="Use %leave to leave this game.")
         file = showHand(client.get_user(716357127739801711), self.communityCards)
         embed.set_image(url="attachment://hand.png")
+
         playerList = ""
         for ID in self.players:
             self.playerHands.update({ID: []})
@@ -121,10 +127,12 @@ class TexasHoldEm(Game):
             self.deal(client.get_user(int(ID)), 2)
             main.money[ID] -= 50
             dumpEconomy()
+
         embed.add_field(name="Players", value=playerList)
         embed.add_field(name="Pot", value="$" + str(self.pot))
         embed.add_field(name="Game ID", value=str(self.ID))
         embed.add_field(name="Community Cards", value="Cards Dealt: " + str(len(self.communityCards)), inline=False)
+
         await self.channel.send(file=file, embed=embed)
 
     async def gameLoop(self):
@@ -151,10 +159,18 @@ class TexasHoldEm(Game):
             loadData()
             score = {}
             overallMax = 0
+            embed.add_field(name="Combo", value="value")
             for ID in self.players:
+
                 user = client.get_user(int(ID))
                 embed.title = user.name + "'s Hand"
                 embed.description = None
+
+                if self.playerStatus[ID] == "Fold":
+                    embed.description = "Folded"
+                    embed.set_field_at(1, name="Combo", value="None")
+                    await self.channel.send(embed=embed)
+                    continue
 
                 maxScore = 0
                 for i in range(0, 5):
@@ -167,14 +183,16 @@ class TexasHoldEm(Game):
                 overallMax = max(maxScore, overallMax)
                 file = showHand(user, self.playerHands[ID])
                 embed.set_image(url="attachment://hand.png")
-                embed.add_field(name="Combo", value=handType(maxScore))
+                embed.set_field_at(1, name="Combo", value=handType(maxScore))
                 await self.channel.send(file=file, embed=embed)
 
             winner = client.get_user(int(score[overallMax]))
+
             embed.title = "Texas Hold 'Em"
             embed.description = "The winner is " + winner.name + ", winning the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumps up for yes, thumps down for no."
             embed.set_thumbnail(url=winner.avatar_url)
             embed.set_footer(text="Use %leave to leave this game.")
+
             main.money[score[overallMax]] += self.pot
             dumpData()
 
@@ -184,7 +202,8 @@ class TexasHoldEm(Game):
             embed.remove_field(0)
             embed.remove_field(0)
             msg = await self.channel.send(embed=embed)
-            embed.set_thumbnail(TexasHoldEm.imageUrl)
+            embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+
             rxn = None
             await msg.add_reaction(confirmEmoji)
             await msg.add_reaction(quitEmoji)
@@ -195,11 +214,12 @@ class TexasHoldEm(Game):
                 return self.players.count(str(user.id)) > 0 and not user.bot
 
             try:
-                rxn = await client.wait_for('reaction_add', timeout=5.0, check=check)
+                rxn = await client.wait_for('reaction_add', timeout=30.0, check=check)
             except asyncio.TimeoutError:
                 embed.description = "Nobody chose in time. Game terminated."
                 embed.add_field(name="Game ID", value=str(self.ID))
                 await self.channel.send(embed=embed)
+
                 import main
                 main.gameList.remove(self)
                 return
@@ -210,6 +230,7 @@ class TexasHoldEm(Game):
                     embed.description = "Game terminated."
                     embed.add_field(name="Game ID", value=str(self.ID))
                     await self.channel.send(embed=embed)
+
                     import main
                     main.gameList.remove(self)
                     return

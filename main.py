@@ -60,40 +60,51 @@ async def __help(ctx, param: str = None):
         embed.add_field(name="Page 3: Games", value="Commands for the different card games.", inline=False)
         embed.add_field(name="Page 4: No Category", value="Commands without a specific category.", inline=False)
         await ctx.send(embed=embed)
+        return
 
     if param.isdecimal():
+        embed = discord.Embed(title=None, description=None, color=0x00ff00)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         if int(param) == 1:
             commands = client.get_cog('Betting').get_commands()
-            embed = discord.Embed(title="Betting Commands", description="To view a specific command, enter the command's name after the %help command. For example: %help rc.", color=0x00ff00)
-            embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+            embed.title = "Betting Commands"
+            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+
             for command in commands:
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
+
             await ctx.send(embed=embed)
         elif int(param) == 2:
             commands = client.get_cog('Economy').get_commands()
-            embed = discord.Embed(title="Economy Commands", description="To view a specific command, enter the command's name after the %help command. For example: %help rc.", color=0x00ff00)
-            embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+            embed.title = "Economy Commands"
+            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+
             for command in commands:
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
+
             await ctx.send(embed=embed)
         elif int(param) == 3:
-            embed = discord.Embed(title="Game Commands", description="To view a help page, just add the page number after the %help command. For example: %help 3.", color=0x00ff00)
-            embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+            embed.title = "Game Commands"
+            embed.description = "To view a help page, just add the page number after the %help command. For example: %help 3."
             embed.add_field(name="Page 5: Texas Hold 'Em", value="Commands for Texas Hold 'Em.", inline=False)
             await ctx.send(embed=embed)
         elif int(param) == 4:
-            embed = discord.Embed(title="Uncategorized Commands", description="To view a specific command, enter the command's name after the %help command. For example: %help rc.", color=0x00ff00)
-            embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+            embed.title = "Uncategorized Commands"
+            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+
             for name in uncategorized:
                 command = hasCommandByName(name)
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
+
             await ctx.send(embed=embed)
         elif int(param) == 5:
-            embed = discord.Embed(title="Texas Hold 'Em Commands", description="To view a specific command, enter the command's name after the %help command. For example: %help rc.", color = 0x00ff00)
-            embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+            embed.title = "Texas Hold 'Em Commands"
+            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
             commands = client.get_cog('Poker').get_commands()
+
             for command in commands:
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
+
             await ctx.send(embed=embed)
     else:
         command = hasCommandByName(param)
@@ -101,6 +112,7 @@ async def __help(ctx, param: str = None):
             return
 
         embed = discord.Embed(title=BOT_PREFIX + command.name, description=command.help, color=0x00ff00)
+        embed.set_author(name="Command Help")
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         await ctx.send(embed=embed)
 
@@ -427,46 +439,38 @@ async def hand(ctx):
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
     loadPreferences()
+
     embed = discord.Embed(title="Sorting Style", description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+    embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
+    embed.add_field(name="Default (d)", value="A - K", inline=False)
+    embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
+
     global order, presOrder, ORDER
+
     if sortType is None:
         embed.description = "No sorting type provided."
-        embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
-        embed.add_field(name="Default (d)", value="A - K", inline=False)
-        embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
         await ctx.send(embed=embed)
         return
 
     if sortType == 'd':
         embed.description = "Sorting type set to Default."
-        embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
-        embed.add_field(name="Default (d)", value="A - K", inline=False)
-        embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
         ORDER = order
     elif sortType == 'p':
         embed.description = "Sorting type set to President-Style."
-        embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
-        embed.add_field(name="Default (d)", value="A - K", inline=False)
-        embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
         ORDER = presOrder
     elif sortType == 's':
         embed.description = "Sorting type set to Suits-Style."
-        embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
-        embed.add_field(name="Default (d)", value="A - K", inline=False)
-        embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
         ORDER = suitOrder
     else:
         embed.description = "Try 'p', 'd', or 's'."
-        embed.add_field(name="President-Style (p)", value="3 - K, A, 2", inline=False)
-        embed.add_field(name="Default (d)", value="A - K", inline=False)
-        embed.add_field(name="Suits (s)", value="Ace of Diamonds - King of Spades", inline=False)
 
     if str(ctx.author.id) in hands:
         userSortType[str(ctx.author.id)] = sortType
     else:
         userSortType.update({str(ctx.author.id): sortType})
+
     await ctx.send(embed=embed)
     dumpPreferences()
 
@@ -547,11 +551,8 @@ async def join(ctx, ID: int):
         del hands[str(ctx.author.id)]
 
     if GAME.gameUnderway:
-        embed.description = "You join a game that was already underway. You will be joined in for the next hand."
+        embed.description = "This game is already underway. You cannot join it now."
         embed.add_field(name="Game ID", value=GAME.ID)
-        GAME.players.append(str(ctx.author.id))
-        if isinstance(GAME, TexasHoldEm):
-            GAME.playerStatus.update({str(ctx.author.id): "Fold"})
         await ctx.send(embed=embed)
         return
 

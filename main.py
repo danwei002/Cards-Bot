@@ -1,14 +1,16 @@
 # CARDS BOT
 import random
-import requests
 import json
 import asyncio
 import discord.ext.commands
 import discord
 import re
+import _mysql_connector
+import mysql.connector
 import Game
 
 from Game import Game, TexasHoldEm
+from DBConnection import DBConnection
 from sortingOrders import order, presOrder, pokerOrder, suitOrder
 from io import BytesIO
 from discord.ext.commands import Bot, has_permissions
@@ -30,9 +32,6 @@ cardHeight = 210
 
 # Data storage
 hands = {}
-userSortType = {}
-money = {}
-handColors = {}
 
 gameList = []
 
@@ -119,6 +118,10 @@ async def __help(ctx, param: str = None):
 
 @client.event
 async def on_ready():
+    for guild in client.guilds:
+        for member in guild.members:
+            if not DBConnection.checkUserInDB(str(member.id)):
+                DBConnection.addUserToDB(str(member.id))
     loadData()
     hands.clear()
     gameLoop.start()
@@ -156,62 +159,28 @@ def channelCheck(GAME, CHANNEL):
 
 # Load all data
 def loadData():
-    global hands, userSortType, players, handColors, money
+    global hands
     with open('hands.json') as hFile:
         hands = json.load(hFile)
-    with open('sortType.json') as sTFile:
-        userSortType = json.load(sTFile)
-    with open('handColors.json') as hCFile:
-        handColors = json.load(hCFile)
-    with open('econ.json') as eFile:
-        money = json.load(eFile)
+
 
 def loadHands():
     global hands
     with open('hands.json') as hFile:
         hands = json.load(hFile)
 
-def loadPreferences():
-    global userSortType, handColors
-    with open('sortType.json') as sTFile:
-        userSortType = json.load(sTFile)
-    with open('handColors.json') as hCFile:
-        handColors = json.load(hCFile)
-
-def loadEconomy():
-    global money
-    with open('econ.json') as eFile:
-        money = json.load(eFile)
-
 
 # Dump all data
 def dumpData():
-    global hands, userSortType, players, handColors, money
+    global hands
     with open('hands.json', 'w') as hFile:
         json.dump(hands, hFile)
-    with open('sortType.json', 'w') as sTFile:
-        json.dump(userSortType, sTFile)
-    with open('handColors.json', 'w') as hCFile:
-        json.dump(handColors, hCFile)
-    with open('econ.json', 'w') as eFile:
-        json.dump(money, eFile)
+
 
 def dumpHands():
     global hands
     with open('hands.json', 'w') as hFile:
         json.dump(hands, hFile)
-
-def dumpPreferences():
-    global userSortType, handColors
-    with open('sortType.json', 'w') as sTFile:
-        json.dump(userSortType, sTFile)
-    with open('handColors.json', 'w') as hCFile:
-        json.dump(handColors, hCFile)
-
-def dumpEconomy():
-    global money
-    with open('econ.json', 'w') as eFile:
-        json.dump(money, eFile)
 
 
 # Add card to user's hand
@@ -256,11 +225,7 @@ def showHand(user, userHand):
     numCards = len(userHand)
     maxWidth = (int(cardWidth / 3) * (numCards - 1)) + cardWidth + 20
 
-    COLOR = ""
-    if not str(user.id) in handColors:
-        COLOR = "#078528"
-    else:
-        COLOR = handColors[str(user.id)]
+    COLOR = DBConnection.fetchUserData("colorPref", str(user.id))
 
     # Create base hand image
     HAND = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb(COLOR))
@@ -283,17 +248,11 @@ def showHand(user, userHand):
 def sortHand(user: discord.Member, HAND):
     global ORDER, presOrder, suitOrder, order
     h = []
-    loadPreferences()
-    loadHands()
-    if str(user.id) not in userSortType:
-        userSortType.update({str(user.id): 'd'})
+    sortType = DBConnection.fetchUserData("sortPref", str(user.id))
 
-    dumpPreferences()
-    dumpHands()
-
-    if userSortType[str(user.id)] == 'p':
+    if sortType== 'p':
         ORDER = presOrder
-    elif userSortType[str(user.id)] == 's':
+    elif sortType == 's':
         ORDER = suitOrder
     else:
         ORDER = order
@@ -438,8 +397,6 @@ async def hand(ctx):
                      "Use 'd' for default ace low, king high sorting.\n Use 's' for sorting by suit.\n",
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
-    loadPreferences()
-
     embed = discord.Embed(title="Sorting Style", description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
@@ -454,25 +411,22 @@ async def setSort(ctx, sortType: str = None):
         await ctx.send(embed=embed)
         return
 
-    if sortType == 'd':
+    if sortType == "d":
         embed.description = "Sorting type set to Default."
         ORDER = order
-    elif sortType == 'p':
+        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
+    elif sortType == "p":
         embed.description = "Sorting type set to President-Style."
         ORDER = presOrder
-    elif sortType == 's':
+        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
+    elif sortType == "s":
         embed.description = "Sorting type set to Suits-Style."
         ORDER = suitOrder
+        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
     else:
         embed.description = "Try 'p', 'd', or 's'."
 
-    if str(ctx.author.id) in hands:
-        userSortType[str(ctx.author.id)] = sortType
-    else:
-        userSortType.update({str(ctx.author.id): sortType})
-
     await ctx.send(embed=embed)
-    dumpPreferences()
 
 
 @client.command(description="Start a game.",
@@ -528,8 +482,6 @@ async def join(ctx, ID: int):
     loadData()
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
-    if str(ctx.author.id) not in money:
-        money.update({str(ctx.author.id): 10000})
 
     if checkInGame(ctx.author):
         embed.description = "You are already in a game."
@@ -643,11 +595,7 @@ async def setColor(ctx, colour: str):
         await ctx.send(embed=embed)
         return
 
-    loadData()
-    if not str(ctx.author.id) in handColors:
-        handColors.update({str(ctx.author.id): colour})
-    else:
-        handColors[str(ctx.author.id)] = colour
+    DBConnection.updateUserData("colorPref", str(ctx.author.id), colour)
 
     embed.colour = int(colour[1:], 16)
     embed.description = "Custom colour set."
@@ -665,12 +613,8 @@ async def gameLoop():
 
 @client.event
 async def on_message(msg):
-    global money
     await client.process_commands(msg)
 
-    if str(msg.author.id) not in money:
-        money.update({str(msg.author.id): 10000})
-        dumpEconomy()
 
 
 client.load_extension('Poker')

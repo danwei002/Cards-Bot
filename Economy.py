@@ -1,10 +1,9 @@
 # Work with Python 3.6
 # USED IMPORTS
 from discord.ext import commands
+from DBConnection import DBConnection
 import discord.ext.commands
 from discord.ext.commands import Bot, has_permissions, CheckFailure
-import main
-from main import client, dumpData, loadData, showHand
 
 imgUrl = "https://i.imgur.com/ydS4u8P.png"
 
@@ -14,18 +13,18 @@ class Economy(commands.Cog):
                       help="Check a user's balance. Mention a user to check their balance, or none to check your own. Format is %bal <mention user/none>.",
                       pass_context=True)
     async def bal(self, ctx, user: discord.Member = None):
-        loadData()
         if user is None:
             user = ctx.author
 
-        if str(user.id) not in main.money:
-            main.money.update({str(user.id): 10000})
-            dumpData()
+        if not DBConnection.checkUserInDB(str(user.id)):
+            DBConnection.addUserToDB(str(user.id))
+
+        money = DBConnection.fetchUserData("userBalance", str(user.id))
 
         embed = discord.Embed(title="User Balance", color=0x00ff00)
         embed.set_author(name=user.display_name, icon_url=user.avatar_url)
         embed.set_thumbnail(url=imgUrl)
-        embed.description = "$" + str(main.money[str(user.id)])
+        embed.description = "$" + str(money)
         await ctx.send(embed=embed)
 
     @bal.error
@@ -49,21 +48,15 @@ class Economy(commands.Cog):
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         embed.set_thumbnail(url=imgUrl)
 
-        loadData()
-
         if amount is None or user is None:
             embed.description = "Invalid format for command. Try %setbal <mention user> <amount>."
             await ctx.send(embed=embed)
             return
 
-        if str(user.id) not in main.money:
-            main.money.update({str(user.id): amount})
-        else:
-            main.money[str(user.id)] = amount
+        DBConnection.updateUserData("userBalance", str(user.id), amount)
 
         embed.description = "Balance for " + user.display_name + " set to $" + str(amount) + "."
         await ctx.send(embed=embed)
-        dumpData()
 
     @setbal.error
     async def setbal_error(self, ctx, error):
@@ -106,25 +99,24 @@ class Economy(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        if str(user.id) not in main.money:
-            main.money.update({str(user.id): 10000})
+        authorMoney = DBConnection.fetchUserData("userBalance", str(ctx.author.id))
+        recipientMoney = DBConnection.fetchUserData("userBalance", str(user.id))
 
-        if str(ctx.author.id) not in main.money:
-            main.money.update({str(ctx.author.id): 10000})
-
-        if amount > main.money[str(ctx.author.id)]:
+        if amount > authorMoney:
             embed.description = "Insufficient funds for payment."
-            embed.add_field(name="Your Balance", value=str(main.money[str(ctx.author.id)]))
+            embed.add_field(name="Your Balance", value="$" + str(authorMoney))
+            await ctx.send(embed=embed)
             return
 
-        main.money[str(ctx.author.id)] -= amount
-        main.money[str(user.id)] += amount
+        authorMoney -= amount
+        recipientMoney += amount
+        DBConnection.updateUserData("userBalance", str(ctx.author.id), authorMoney)
+        DBConnection.updateUserData("userBalance", str(user.id), recipientMoney)
 
         embed.description = "Payment of $" + str(amount) + " sent to " + user.display_name + "."
-        embed.add_field(name="Your New Balance", value=str(main.money[str(ctx.author.id)]))
-        embed.add_field(name=user.display_name + "'s New Balance", value=str(main.money[str(user.id)]), inline=False)
+        embed.add_field(name="Your New Balance", value="$" + str(authorMoney))
+        embed.add_field(name=user.display_name + "'s New Balance", value="$" + str(recipientMoney), inline=False)
         await ctx.send(embed=embed)
-        dumpData()
 
     @pay.error
     async def pay_error(self, ctx, error):

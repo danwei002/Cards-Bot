@@ -4,6 +4,7 @@ import discord
 import asyncio
 
 from abc import abstractmethod
+from DBConnection import DBConnection
 from CardEval import evaluateHand, handType
 
 DECK_CONST = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
@@ -88,7 +89,7 @@ class TexasHoldEm(Game):
                 self.playerStatus[ID] = "Active"
 
     async def newHand(self):
-        from main import loadData, dumpEconomy, client, showHand
+        from main import loadData, client, showHand
         import main
 
         self.gameEnded = False
@@ -111,11 +112,12 @@ class TexasHoldEm(Game):
         for ID in self.players:
             self.playerHands.update({ID: []})
             self.playerStatus[ID] = "Active"
+            userMoney = DBConnection.fetchUserData("userBalance", ID)
             if ID not in self.bets:
                 self.bets.update({ID: 50})
             else:
                 self.bets[ID] = 50
-            if main.money[ID] < 50:
+            if userMoney < 50:
                 await self.channel.send(client.get_user(int(ID)).mention + " you cannot afford to play a new hand.")
                 self.players.remove(ID)
                 continue
@@ -125,8 +127,9 @@ class TexasHoldEm(Game):
             self.maxBet = 50
             self.pot += 50
             self.deal(client.get_user(int(ID)), 2)
-            main.money[ID] -= 50
-            dumpEconomy()
+
+            userMoney -= 50
+            DBConnection.updateUserData("userBalance", ID, userMoney)
 
         embed.add_field(name="Players", value=playerList)
         embed.add_field(name="Pot", value="$" + str(self.pot))
@@ -193,7 +196,9 @@ class TexasHoldEm(Game):
             embed.set_thumbnail(url=winner.avatar_url)
             embed.set_footer(text="Use %leave to leave this game.")
 
-            main.money[score[overallMax]] += self.pot
+            userMoney = DBConnection.fetchUserData("userBalance", score[overallMax])
+            userMoney += self.pot
+            DBConnection.updateUserData("userBalance", score[overallMax], userMoney)
             dumpData()
 
             confirmEmoji = '👍'

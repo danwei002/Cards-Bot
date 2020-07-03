@@ -1,9 +1,10 @@
 # CARDS BOT
 from discord.ext import commands
+from DBConnection import DBConnection
 
 import discord
 import main
-from main import loadEconomy, dumpEconomy, checkInGame, getGame, channelCheck
+from main import checkInGame, getGame, channelCheck
 
 class Betting(commands.Cog):
     @commands.command(description="Raise your bet.",
@@ -12,12 +13,13 @@ class Betting(commands.Cog):
                       help="Raise your bet by a specified amount. Format for this command is %raise <amount>. Requires sufficient balance to use.",
                       pass_context=True)
     async def __raise(self, ctx, raiseBy: float = None):
-        loadEconomy()
         ID = str(ctx.author.id)
         embed = discord.Embed(title="Bet Raise", color=0x00ff00)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         from main import client
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+
+        authorMoney = DBConnection.fetchUserData("userBalance", ID)
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in a game."
@@ -41,14 +43,14 @@ class Betting(commands.Cog):
             return
 
         embed.set_footer(text="Format is %raise <amount to raise by>.")
-        embed.add_field(name="Your Balance", value="$" + str(main.money[ID]), inline=False)
+        embed.add_field(name="Your Balance", value="$" + str(authorMoney), inline=False)
 
         if GAME.playerStatus[ID] == "Fold":
             embed.description = "You are not participating in the current hand. Wait for the next one to start."
             await ctx.send(embed=embed)
             return
 
-        if main.money[ID] < raiseBy:
+        if authorMoney < raiseBy:
             embed.description = "You do not have the funds to raise by $" + str(raiseBy) + "."
             await ctx.send(embed=embed)
             return
@@ -60,13 +62,13 @@ class Betting(commands.Cog):
             return
 
         GAME.bets[ID] += raiseBy
-        main.money[ID] -= raiseBy
+        authorMoney -= raiseBy
         GAME.maxBet = GAME.bets[ID]
         GAME.pot += raiseBy
-        dumpEconomy()
+        DBConnection.updateUserData("userBalance", ID, authorMoney)
 
         embed.remove_field(1)
-        embed.add_field(name="Your New Balance", value="$" + str(main.money[ID]), inline=False)
+        embed.add_field(name="Your New Balance", value="$" + str(authorMoney), inline=False)
         embed.add_field(name="Current Highest Bet", value="$" + str(GAME.maxBet), inline=False)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.description = "You raised your bet to $" + str(GAME.bets[ID])
@@ -88,8 +90,8 @@ class Betting(commands.Cog):
                       help="Match the current highest bet. Format is %call. No parameters are needed. Requires sufficient balance to use.",
                       pass_context=True)
     async def __call(self, ctx):
-        loadEconomy()
         ID = str(ctx.author.id)
+        authorMoney = DBConnection.fetchUserData("userBalance", ID)
         embed = discord.Embed(title="Bet Call", color=0x00ff00)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         from main import client
@@ -117,7 +119,7 @@ class Betting(commands.Cog):
             return
 
         embed.set_footer(text="Format is %raise <amount to raise by>.")
-        embed.add_field(name="Your Balance", value="$" + str(main.money[ID]), inline=False)
+        embed.add_field(name="Your Balance", value="$" + str(authorMoney), inline=False)
 
         if GAME.playerStatus[ID] == "Fold":
             embed.description = "You are not participating in the current hand. Wait for the next one to start."
@@ -131,7 +133,7 @@ class Betting(commands.Cog):
                 await ctx.send(embed=embed)
                 return
 
-        if main.money[ID] < GAME.maxBet:
+        if authorMoney < GAME.maxBet - GAME.bets[ID]:
             embed.description = "You do not have the funds to match the highest bet."
             await ctx.send(embed=embed)
             return
@@ -140,15 +142,15 @@ class Betting(commands.Cog):
             difference = GAME.maxBet - GAME.bets[ID]
             GAME.pot += difference
             GAME.bets[ID] = GAME.maxBet
-            main.money[ID] -= difference
+            authorMoney -= difference
         else:
             GAME.pot += GAME.maxBet
             GAME.bets[ID] = GAME.maxBet
-            main.money[ID] -= GAME.maxBet
+            authorMoney -= GAME.maxBet
 
-        dumpEconomy()
+        DBConnection.updateUserData("userBalance", ID, authorMoney)
 
-        embed.set_field_at(1, name="Your New Balance", value = str(main.money[ID]), inline=False)
+        embed.set_field_at(1, name="Your New Balance", value = str(authorMoney), inline=False)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.description = "You matched the highest bet of $" + str(GAME.maxBet) + "."
         await ctx.send(embed=embed)
@@ -159,7 +161,6 @@ class Betting(commands.Cog):
                       help="Fold and forfeit, taking no further part in the hand. You will lose any amount you already bet. Format is %fold. No parameters are needed.",
                       pass_context=True)
     async def __fold(self, ctx):
-        loadEconomy()
         ID = str(ctx.author.id)
         embed = discord.Embed(title="Fold", color=0x00ff00)
         from main import client

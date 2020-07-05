@@ -53,7 +53,7 @@ class Economy(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        DBConnection.updateUserData("userBalance", str(user.id), amount)
+        DBConnection.updateUserBalance(str(user.id), amount)
 
         embed.description = "Balance for " + user.display_name + " set to $" + str(amount) + "."
         await ctx.send(embed=embed)
@@ -110,8 +110,8 @@ class Economy(commands.Cog):
 
         authorMoney -= amount
         recipientMoney += amount
-        DBConnection.updateUserData("userBalance", str(ctx.author.id), authorMoney)
-        DBConnection.updateUserData("userBalance", str(user.id), recipientMoney)
+        DBConnection.updateUserBalance(str(ctx.author.id), authorMoney)
+        DBConnection.updateUserBalance(str(user.id), recipientMoney)
 
         embed.description = "Payment of $" + str(amount) + " sent to " + user.display_name + "."
         embed.add_field(name="Your New Balance", value="$" + str(authorMoney))

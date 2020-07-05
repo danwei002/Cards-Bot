@@ -89,13 +89,10 @@ class TexasHoldEm(Game):
                 self.playerStatus[ID] = "Active"
 
     async def newHand(self):
-        from main import loadData, client, showHand
-        import main
+        from main import client, showHand
 
         self.gameEnded = False
         self.playerHands.clear()
-
-        loadData()
 
         self.DECK = DECK_CONST
         self.pot = 0
@@ -129,7 +126,7 @@ class TexasHoldEm(Game):
             self.deal(client.get_user(int(ID)), 2)
 
             userMoney -= 50
-            DBConnection.updateUserData("userBalance", ID, userMoney)
+            DBConnection.updateUserBalance(ID, userMoney)
 
         embed.add_field(name="Players", value=playerList)
         embed.add_field(name="Pot", value="$" + str(self.pot))
@@ -153,21 +150,19 @@ class TexasHoldEm(Game):
             self.endGame()
 
         if self.gameEnded:
-            embed = discord.Embed(title="Texas Hold 'Em", description="Round finished, revealing all player's hands...", colour=0x00ff00)
+            embed = discord.Embed(title="Texas Hold 'Em", colour=0x00ff00)
             embed.add_field(name="Game ID", value=str(self.ID))
             embed.set_thumbnail(url=TexasHoldEm.imageUrl)
-            await self.channel.send(embed=embed)
+
             import main
-            from main import loadData, dumpData, client, showHand
-            loadData()
+            from main import client, showHand
+
             score = {}
             overallMax = 0
             embed.add_field(name="Combo", value="value")
             for ID in self.players:
-
                 user = client.get_user(int(ID))
                 embed.title = user.name + "'s Hand"
-                embed.description = None
 
                 if self.playerStatus[ID] == "Fold":
                     embed.description = "Folded"
@@ -198,8 +193,7 @@ class TexasHoldEm(Game):
 
             userMoney = DBConnection.fetchUserData("userBalance", score[overallMax])
             userMoney += self.pot
-            DBConnection.updateUserData("userBalance", score[overallMax], userMoney)
-            dumpData()
+            DBConnection.updateUserBalance(score[overallMax], userMoney)
 
             confirmEmoji = '👍'
             quitEmoji = '👎'

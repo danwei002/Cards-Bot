@@ -11,19 +11,38 @@ DBCursor = botDB.cursor()
 class DBConnection:
     @classmethod
     def fetchUserData(cls, dataType: str, userID: str):
-        DBCursor.execute("select " + dataType + " from userData where userID = " + userID)
+        vals = (userID, )
+        sqlQuery = 'select * from userData where userID = %s'
+        DBCursor.execute(sqlQuery, vals)
         result = DBCursor.fetchone()
-        return result[0]
+
+        if dataType == "userBalance":
+            return result[1]
+        elif dataType == "colorPref":
+            return result[2]
+        elif dataType == "sortPref":
+            return result[3]
 
     @classmethod
-    def updateUserData(cls, dataType: str, userID: str, updatedValue):
-        if dataType == "userBalance":
-            DBCursor.execute("update userData set " + dataType + " = " + str(updatedValue) + " where userID = " + userID)
-            botDB.commit()
-        else:
-            DBCursor.execute("update userData set " + dataType + " = '" + str(updatedValue) + "' where userID = " + userID)
-            botDB.commit()
+    def updateUserBalance(cls, userID: str, balance: int):
+        vals = (balance, userID)
+        sqlQuery = 'update userData set userBalance = %s where userID = %s'
+        DBCursor.execute(sqlQuery, vals)
+        botDB.commit()
 
+    @classmethod
+    def updateUserSortPref(cls, userID: str, sortPref: str):
+        vals = (sortPref, userID)
+        sqlQuery = 'update userData set sortPref = %s where userID = %s'
+        DBCursor.execute(sqlQuery, vals)
+        botDB.commit()
+
+    @classmethod
+    def updateUserHandColor(cls, userID: str, color: str):
+        vals = (color, userID)
+        sqlQuery = 'update userData set colorPref = %s where userID = %s'
+        DBCursor.execute(sqlQuery, vals)
+        botDB.commit()
 
     @classmethod
     def checkUserInDB(cls, userID: str):
@@ -35,6 +54,6 @@ class DBConnection:
     def addUserToDB(cls, userID: str):
         query = """INSERT INTO userData (userID, userBalance, colorPref, sortPref) 
                 VALUES (%s, %s, %s, %s) """
-        dataTuple = (userID, 10000, "#00ff00", 'd', "default")
+        dataTuple = (userID, 10000, "#00ff00", 'd')
         DBCursor.execute(query, dataTuple)
         botDB.commit()

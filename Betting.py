@@ -65,7 +65,7 @@ class Betting(commands.Cog):
         authorMoney -= raiseBy
         GAME.maxBet = GAME.bets[ID]
         GAME.pot += raiseBy
-        DBConnection.updateUserData("userBalance", ID, authorMoney)
+        DBConnection.updateUserBalance(ID, authorMoney)
 
         embed.remove_field(1)
         embed.add_field(name="Your New Balance", value="$" + str(authorMoney), inline=False)
@@ -148,7 +148,7 @@ class Betting(commands.Cog):
             GAME.bets[ID] = GAME.maxBet
             authorMoney -= GAME.maxBet
 
-        DBConnection.updateUserData("userBalance", ID, authorMoney)
+        DBConnection.updateUserBalance(ID, authorMoney)
 
         embed.set_field_at(1, name="Your New Balance", value = str(authorMoney), inline=False)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))

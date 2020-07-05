@@ -122,8 +122,6 @@ async def on_ready():
         for member in guild.members:
             if not DBConnection.checkUserInDB(str(member.id)):
                 DBConnection.addUserToDB(str(member.id))
-    loadData()
-    hands.clear()
     gameLoop.start()
     print("Now online.")
 
@@ -156,46 +154,6 @@ def getGame(user: discord.Member):
 # Check if message and game channel match
 def channelCheck(GAME, CHANNEL):
     return GAME.channel == CHANNEL
-
-# Load all data
-def loadData():
-    global hands
-    with open('hands.json') as hFile:
-        hands = json.load(hFile)
-
-
-def loadHands():
-    global hands
-    with open('hands.json') as hFile:
-        hands = json.load(hFile)
-
-
-# Dump all data
-def dumpData():
-    global hands
-    with open('hands.json', 'w') as hFile:
-        json.dump(hands, hFile)
-
-
-def dumpHands():
-    global hands
-    with open('hands.json', 'w') as hFile:
-        json.dump(hands, hFile)
-
-
-# Add card to user's hand
-def addCard(user: discord.Member, card: str):
-    global hands
-    if str(user.id) in hands:
-        hands[str(user.id)].append(card)
-    else:
-        hands.update({str(user.id): [card]})
-
-
-# Reset all game data and variables
-def resetData():
-    global hands
-    hands.clear()
 
 
 # Card generator
@@ -317,22 +275,11 @@ async def rc(ctx):
                      "Format for this command is %draw <number of cards>. Number of cards should be between 1-52 inclusive.",
                 pass_context=True)
 async def draw(ctx, cards: int = 1):
-    loadHands()
     embed = discord.Embed(title="Draw Card", description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
     if cards > 52 or cards <= 0:
         embed.description = "You cannot draw this number of cards. Provide a number between 1 and 52 inclusive."
-        await ctx.send(embed=embed)
-        return
-
-    if str(ctx.author.id) in hands and len(hands[str(ctx.author.id)]) + cards > 52:
-        embed.description = "You cannot hold more than 52 cards."
-        await ctx.send(embed=embed)
-        return
-
-    if checkInGame(ctx.author):
-        embed.description = "Cannot use this command while in a game."
         await ctx.send(embed=embed)
         return
 
@@ -347,15 +294,16 @@ async def draw(ctx, cards: int = 1):
                 "deck/QH.png", "deck/QS.png",
                 "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
 
+    dealtCards = []
     for i in range(0, cards):
         cardName = random.choice(drawDeck)
         drawDeck.remove(cardName)
-        addCard(ctx.author, cardName)
+        dealtCards.append(cardName)
 
     embed.description = str(cards) + " card(s) dealt."
-    embed.set_footer(text="Check your hand using '%hand'")
-    await ctx.send(embed=embed)
-    dumpHands()
+    file = showHand(ctx.author, dealtCards)
+    embed.set_image(url="attachment://hand.png")
+    await ctx.send(file=file, embed=embed)
 
 
 @client.command(description="View your hand.",
@@ -363,7 +311,6 @@ async def draw(ctx, cards: int = 1):
                 help="View the cards you have in your hand. The bot will PM you an image containing your hand. Format is %hand without any parameters.",
                 pass_context=True)
 async def hand(ctx):
-    loadHands()
     embed = discord.Embed(title=ctx.author.name + "'s Hand", description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
@@ -379,15 +326,8 @@ async def hand(ctx):
             embed.description = "Your game has not started yet."
             await ctx.send(embed=embed)
     else:
-        if str(ctx.author.id) not in hands or len(hands[str(ctx.author.id)]) == 0:
-            embed.description = "You have no cards in your hand."
-            await ctx.author.send(embed=embed)
-            return
-
-        file = showHand(ctx.author, hands[str(ctx.author.id)])
-        embed.set_image(url="attachment://hand.png")
-        embed.add_field(name="Number of Cards", value=str(len(hands[str(ctx.author.id)])))
-        await ctx.author.send(file=file, embed=embed)
+        embed.description = "You are not in a game."
+        await ctx.send(embed=embed)
 
 
 @client.command(description="Set sorting type. Use 'p' for president-style sorting (3 low, 2 high), 'd' for default sorting (A low, K high), 's' for suit sorting (diamonds - spades).",
@@ -414,15 +354,15 @@ async def setSort(ctx, sortType: str = None):
     if sortType == "d":
         embed.description = "Sorting type set to Default."
         ORDER = order
-        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
+        DBConnection.updateUserSortPref(str(ctx.author.id), sortType)
     elif sortType == "p":
         embed.description = "Sorting type set to President-Style."
         ORDER = presOrder
-        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
+        DBConnection.updateUserSortPref(str(ctx.author.id), sortType)
     elif sortType == "s":
         embed.description = "Sorting type set to Suits-Style."
         ORDER = suitOrder
-        DBConnection.updateUserData("sortPref", str(ctx.author.id), sortType)
+        DBConnection.updateUserSortPref(str(ctx.author.id), sortType)
     else:
         embed.description = "Try 'p', 'd', or 's'."
 
@@ -479,7 +419,6 @@ async def game(ctx):
                 help="Join an existing game using its 6-digit ID. Format for this command is %join <6-digit ID>.",
                 pass_context=True)
 async def join(ctx, ID: int):
-    loadData()
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
 
@@ -499,8 +438,6 @@ async def join(ctx, ID: int):
         return
 
     GAME = getGameByID(ID)
-    if str(ctx.author.id) in hands:
-        del hands[str(ctx.author.id)]
 
     if GAME.gameUnderway:
         embed.description = "This game is already underway. You cannot join it now."
@@ -520,7 +457,6 @@ async def join(ctx, ID: int):
     embed.add_field(name="Game ID", value=GAME.ID)
     embed.set_thumbnail(url=GAME.imageUrl)
     await ctx.send(embed=embed)
-    dumpData()
 
 
 @client.command(description="Leave a game you are apart of and forfeits any bets made if the game was already underway.",
@@ -542,10 +478,7 @@ async def leave(ctx):
         return
 
     GAME.players.remove(str(ctx.author.id))
-    loadHands()
-    if str(ctx.author.id) in hands:
-        del hands[str(ctx.author.id)]
-    dumpHands()
+
     embed.description = "You left your game."
     embed.add_field(name="Game ID", value=str(GAME.ID))
     embed.set_thumbnail(url=GAME.imageUrl)
@@ -595,14 +528,13 @@ async def setColor(ctx, colour: str):
         await ctx.send(embed=embed)
         return
 
-    DBConnection.updateUserData("colorPref", str(ctx.author.id), colour)
+    DBConnection.updateUserHandColor(str(ctx.author.id), colour)
 
     embed.colour = int(colour[1:], 16)
     embed.description = "Custom colour set."
     embed.add_field(name="Colour", value="<-----")
 
     await ctx.send(embed=embed)
-    dumpData()
 
 
 @loop(seconds=1)
@@ -614,8 +546,6 @@ async def gameLoop():
 @client.event
 async def on_message(msg):
     await client.process_commands(msg)
-
-
 
 client.load_extension('Poker')
 client.load_extension('Economy')

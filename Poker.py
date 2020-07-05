@@ -101,7 +101,10 @@ class Poker(commands.Cog):
             user = client.get_user(int(playerID))
             playerList += user.name + "\n"
 
-        embed.description = "Next card dealt."
+        if len(GAME.communityCards) == 5:
+            embed.description = "Round finished, revealing all player's hands..."
+        else:
+            embed.description = "Next card dealt."
         embed.add_field(name="Players", value=playerList)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.add_field(name="Game ID", value=str(GAME.ID))

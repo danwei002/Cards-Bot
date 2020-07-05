@@ -62,7 +62,7 @@ class Economy(commands.Cog):
     async def setbal_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             embed = discord.Embed(title="Command Error",
-                                  description="Invalid arguments detected for command 'setbal'. Try %setbal <mention user> <amount> or check %help setbal for more details.",
+                                  description="Invalid arguments detected for command 'setbal'. Check %help setbal for more details.",
                                   color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             embed.set_thumbnail(url=imgUrl)

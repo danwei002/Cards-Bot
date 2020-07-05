@@ -78,7 +78,7 @@ class Betting(commands.Cog):
     @__raise.error
     async def raise_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'raise'. Try %raise <raiseBy> or check %help raise for more details.", color=0x00ff00)
+            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'raise'. Check %help raise for more details.", color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             from main import client
             embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)

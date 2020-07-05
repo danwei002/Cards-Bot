@@ -31,12 +31,9 @@ offset = 10
 cardWidth = 138
 cardHeight = 210
 
-# Data storage
-hands = {}
-
 gameList = []
 
-uncategorized = ['rc', 'hand', 'draw', 'setColor', 'setSort', 'game', 'join', 'start']
+uncategorized = ['draw', 'game', 'hand',  'join', 'rc', 'setColor', 'setSort', 'start']
 
 def hasCommandByName(name: str):
     for command in client.commands:
@@ -274,8 +271,8 @@ async def rc(ctx):
 
 @client.command(description="Pull a number of random cards from the deck.",
                 brief="Draw a number of cards from the deck",
-                help="Pull a number of specified random cards from the deck and add them to your hand. This command is not available while in a game. "
-                     "Format for this command is %draw <number of cards>. Number of cards should be between 1-52 inclusive.",
+                help="Pull a number of specified random cards from the deck.\n"
+                     "Format for this command is %draw <number of cards>.\n Number of cards should be between 1-52 inclusive.",
                 pass_context=True)
 async def draw(ctx, cards: int = 1):
     embed = discord.Embed(title="Draw Card", description=None, color=0x00ff00)
@@ -367,7 +364,7 @@ async def setSort(ctx, sortType: str = None):
         ORDER = suitOrder
         DBConnection.updateUserSortPref(str(ctx.author.id), sortType)
     else:
-        embed.description = "Try 'p', 'd', or 's'."
+        embed.description = "Try 'd', 'p', or 's'."
 
     await ctx.send(embed=embed)
 
@@ -422,13 +419,18 @@ async def game(ctx):
                 brief="Join a game.",
                 help="Join an existing game using its 6-digit ID. Format for this command is %join <6-digit ID>.",
                 pass_context=True)
-async def join(ctx, ID: int):
+async def join(ctx, ID: int = None):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
 
     if checkInGame(ctx.author):
         embed.description = "You are already in a game."
+        await ctx.send(embed=embed)
+        return
+
+    if ID is None:
+        embed.description = "You did not provide a 6-digit game ID."
         await ctx.send(embed=embed)
         return
 

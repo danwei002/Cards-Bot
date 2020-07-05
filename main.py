@@ -10,6 +10,7 @@ import mysql.connector
 import Game
 
 from Game import Game, TexasHoldEm
+from datetime import datetime
 from DBConnection import DBConnection
 from sortingOrders import order, presOrder, pokerOrder, suitOrder
 from io import BytesIO
@@ -45,6 +46,7 @@ def hasCommandByName(name: str):
 
 @client.command(description="Custom help command.",
                 name="help",
+                help="You're already using the command. What more help could you possibly need?",
                 pass_context=True)
 async def __help(ctx, param: str = None):
     if param is None:
@@ -58,6 +60,7 @@ async def __help(ctx, param: str = None):
                         inline=False)
         embed.add_field(name="Page 3: Games", value="Commands for the different card games.", inline=False)
         embed.add_field(name="Page 4: No Category", value="Commands without a specific category.", inline=False)
+        embed.set_footer(text="")
         await ctx.send(embed=embed)
         return
 
@@ -378,6 +381,7 @@ async def game(ctx):
     global gameList
     if checkInGame(ctx.author):
         embed = discord.Embed(title=None, description="You are already in a game.", color=0x00ff00)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
         await ctx.send(embed=embed)
         return
@@ -421,6 +425,7 @@ async def game(ctx):
 async def join(ctx, ID: int):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+    embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
 
     if checkInGame(ctx.author):
         embed.description = "You are already in a game."
@@ -466,6 +471,7 @@ async def join(ctx, ID: int):
 async def leave(ctx):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+    embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
     if not checkInGame(ctx.author):
         embed.description = "You are not in a game."
         await ctx.send(embed=embed)
@@ -492,6 +498,7 @@ async def leave(ctx):
 async def start(ctx):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
     embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+    embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
     if not checkInGame(ctx.author):
         embed.description = "You are not in a game."
         await ctx.send(embed=embed)

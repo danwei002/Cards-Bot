@@ -1,5 +1,5 @@
 # Discord Playing Cards Bot
-This is a discord bot I am working on that will support numerous types of playing card games, such as Texas Hold 'Em, President, etc.
+This is a discord bot I am working on that will support numerous types of playing card games, such as Texas Hold 'Em, President, etc. Data is stored and accessed using a MySQL database.
 <br>
 <br>
 Current features:

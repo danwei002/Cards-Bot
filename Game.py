@@ -2,6 +2,7 @@
 import random
 import discord
 import asyncio
+import itertools
 
 from abc import abstractmethod
 from DBConnection import DBConnection
@@ -171,11 +172,10 @@ class TexasHoldEm(Game):
                     continue
 
                 maxScore = 0
-                for i in range(0, 5):
-                    for j in range(i + 1, 5):
-                        for k in range(j + 1, 5):
-                            cardVals = [self.playerHands[str(user.id)][0], self.playerHands[str(user.id)][1], self.communityCards[i], self.communityCards[j], self.communityCards[k]]
-                            maxScore = max(maxScore, evaluateHand(cardVals))
+                cardChoices = [self.communityCards[0], self.communityCards[1], self.communityCards[2], self.communityCards[3], self.communityCards[4], self.playerHands[str(user.id)][0], self.playerHands[str(user.id)][1]]
+                combos = list(itertools.combinations(cardChoices, 5))
+                for combo in combos:
+                    maxScore = max(maxScore, evaluateHand(combo))
 
                 score.update({maxScore: ID})
                 overallMax = max(maxScore, overallMax)
@@ -184,16 +184,38 @@ class TexasHoldEm(Game):
                 embed.set_field_at(1, name="Combo", value=handType(maxScore))
                 await self.channel.send(file=file, embed=embed)
 
-            winner = client.get_user(int(score[overallMax]))
+            winners = []
+            for userScore, userID in score.items():
+                if userScore == overallMax:
+                    print(client.get_user(int(userID)).name)
+                    winners.append(userID)
 
-            embed.title = "Texas Hold 'Em"
-            embed.description = "The winner is " + winner.name + ", winning the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumps up for yes, thumps down for no."
-            embed.set_thumbnail(url=winner.avatar_url)
-            embed.set_footer(text="Use %leave to leave this game.")
+            if len(winners) == 1:
+                winner = client.get_user(int(score[overallMax]))
 
-            userMoney = DBConnection.fetchUserData("userBalance", score[overallMax])
-            userMoney += self.pot
-            DBConnection.updateUserBalance(score[overallMax], userMoney)
+                embed.title = "Texas Hold 'Em"
+                embed.description = "The winner is " + winner.name + ", winning the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumps up for yes, thumbs down for no."
+                embed.set_thumbnail(url=winner.avatar_url)
+                embed.set_footer(text="Use %leave to leave this game.")
+
+                userMoney = DBConnection.fetchUserData("userBalance", score[overallMax])
+                userMoney += self.pot
+                DBConnection.updateUserBalance(score[overallMax], userMoney)
+            else:
+                payout = self.pot / len(winners)
+                embed.title = "Texas Hold 'Em"
+                desc = "The winners are "
+                for winnerID in winners:
+                    winner = client.get_user(int(winnerID))
+                    desc += winner.name + " "
+                    userMoney = DBConnection.fetchUserData("userBalance", winnerID)
+                    userMoney += payout
+                    DBConnection.updateUserBalance(winnerID, userMoney)
+
+                desc += ", splitting the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumbs up for yes, thumbs down for no."
+                embed.description = desc
+                embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+                embed.set_footer(text="Use %leave to leave this game.")
 
             confirmEmoji = '👍'
             quitEmoji = '👎'

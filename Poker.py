@@ -92,7 +92,7 @@ class Poker(commands.Cog):
             return
 
         GAME.deal(me, 1)
-        file = showHand(ctx.author, GAME.communityCards)
+        file = showHand(client.get_user(716357127739801711), GAME.communityCards)
         embed.set_image(url="attachment://hand.png")
 
         playerList = ""
@@ -151,7 +151,7 @@ class Poker(commands.Cog):
             return
 
         embed.set_author(name="", icon_url="")
-        file = showHand(ctx.author, GAME.communityCards)
+        file = showHand(client.get_user(716357127739801711), GAME.communityCards)
         embed.set_image(url="attachment://hand.png")
 
         playerList = ""

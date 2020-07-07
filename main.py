@@ -9,7 +9,7 @@ import _mysql_connector
 import mysql.connector
 import Game
 
-from Game import Game, TexasHoldEm
+from Game import Game, TexasHoldEm, President
 from datetime import datetime
 from DBConnection import DBConnection
 from sortingOrders import order, presOrder, pokerOrder, suitOrder
@@ -86,6 +86,7 @@ async def __help(ctx, param: str = None):
             embed.title = "Game Commands"
             embed.description = "To view a help page, just add the page number after the %help command. For example: %help 3."
             embed.add_field(name="Page 5: Texas Hold 'Em", value="Commands for Texas Hold 'Em.", inline=False)
+            embed.add_field(name="Page 6: President", value="Commands for President.", inline=False)
             await ctx.send(embed=embed)
         elif int(param) == 4:
             embed.title = "Uncategorized Commands"
@@ -105,6 +106,16 @@ async def __help(ctx, param: str = None):
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
 
             await ctx.send(embed=embed)
+        elif int(param) == 6:
+            embed.title = "President"
+            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            commands = client.get_cog('Pres').get_commands()
+
+            for command in commands:
+                embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
+
+            await ctx.send(embed=embed)
+
     else:
         command = hasCommandByName(param)
         if command is None:
@@ -186,15 +197,15 @@ def showHand(user, userHand):
     COLOR = DBConnection.fetchUserData("colorPref", str(user.id))
 
     # Create base hand image
-    HAND = Image.new("RGB", (maxWidth, cardHeight + 20), ImageColor.getrgb(COLOR))
+    HAND = Image.new("RGB", (maxWidth, cardHeight + 40), ImageColor.getrgb(COLOR))
     DRAW = ImageDraw.Draw(HAND)
 
-    font = ImageFont.truetype('calibri.ttf', size=14)
+    font = ImageFont.truetype('calibri.ttf', size=24)
     for i in range(0, numCards):
         card = Image.open(userHand[i])
         card = card.resize((cardWidth, cardHeight))
         HAND.paste(card, (10 + int(cardWidth / 3) * i, 10))
-        DRAW.text((30 + int(cardWidth / 3) * i, 15), str(i), fill=ImageColor.getrgb("#ffffff"), font=font)
+        DRAW.text((30 + int(cardWidth / 3) * i, cardHeight + 15), str(i), fill=ImageColor.getrgb("#ffffff"), font=font)
 
     with BytesIO() as img:
         HAND.save(img, 'PNG')
@@ -384,11 +395,14 @@ async def game(ctx):
         return
 
     emoji1 = '1️⃣'
+    emoji2 = '2️⃣'
     embed = discord.Embed(title="Game Selection", description="Select a game type by reacting to this message with the given emoji.", color=0x00ff00)
     embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
     embed.add_field(name="Texas Hold 'Em", value=emoji1)
+    embed.add_field(name="President", value=emoji2)
     msg = await ctx.send(embed=embed)
     await msg.add_reaction(emoji1)
+    await msg.add_reaction(emoji2)
     rxn = None
 
     def check(reaction, user):
@@ -409,6 +423,17 @@ async def game(ctx):
             GAME = TexasHoldEm(ctx.channel, ID)
             gameList.append(GAME)
             embed = discord.Embed(title="Game Creation", description="Texas Hold 'Em game created.", color=0x00ff00)
+            embed.add_field(name="Game ID", value=str(ID))
+            embed.add_field(name="Joining", value="%join " + str(ID))
+            embed.set_thumbnail(url=GAME.imageUrl)
+            await ctx.send(embed=embed)
+        elif str(rxn[0].emoji) == emoji2:
+            ID = randrange(100000, 1000000)
+            while hasGame(ID):
+                ID = randrange(100000, 1000000)
+            GAME = President(ctx.channel, ID)
+            gameList.append(GAME)
+            embed = discord.Embed(title="Game Creation", description="President game created.", color=0x00ff00)
             embed.add_field(name="Game ID", value=str(ID))
             embed.add_field(name="Joining", value="%join " + str(ID))
             embed.set_thumbnail(url=GAME.imageUrl)
@@ -519,6 +544,11 @@ async def start(ctx):
         await ctx.send(embed=embed)
         return
 
+    if len(GAME.players) == 1:
+        embed.description = "You can't play alone!"
+        await ctx.send(embed=embed)
+        return
+
     await GAME.startGame()
 
 
@@ -559,4 +589,5 @@ async def on_message(msg):
 client.load_extension('Poker')
 client.load_extension('Economy')
 client.load_extension('Betting')
+client.load_extension('Pres')
 client.run(TOKEN)

@@ -29,8 +29,17 @@ class Game:
         self.gameEnded = False
         self.ID = ID
         self.players = []
-        self.DECK = DECK_CONST
         self.playerHands = {}
+        self.DECK = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
+                     "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
+                     "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
+                     "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
+                     "deck/7D.png", "deck/7C.png", "deck/7H.png", "deck/7S.png", "deck/8D.png", "deck/8C.png", "deck/8H.png",
+                     "deck/8S.png", "deck/9D.png", "deck/9C.png", "deck/9H.png", "deck/9S.png",
+                     "deck/10D.png", "deck/10C.png", "deck/10H.png",
+                     "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
+                     "deck/QH.png", "deck/QS.png",
+                     "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
 
     def checkEnded(self):
         return self.gameEnded
@@ -91,11 +100,18 @@ class TexasHoldEm(Game):
 
     async def newHand(self):
         from main import client, showHand
-
         self.gameEnded = False
         self.playerHands.clear()
-
-        self.DECK = DECK_CONST
+        self.DECK = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
+                      "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
+                      "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
+                      "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
+                      "deck/7D.png", "deck/7C.png", "deck/7H.png", "deck/7S.png", "deck/8D.png", "deck/8C.png", "deck/8H.png",
+                      "deck/8S.png", "deck/9D.png", "deck/9C.png", "deck/9H.png", "deck/9S.png",
+                      "deck/10D.png", "deck/10C.png", "deck/10H.png",
+                      "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
+                      "deck/QH.png", "deck/QS.png",
+                      "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
         self.pot = 0
         self.communityCards.clear()
         self.deal(client.get_user(716357127739801711), 3)
@@ -207,7 +223,7 @@ class TexasHoldEm(Game):
                 desc = "The winners are "
                 for winnerID in winners:
                     winner = client.get_user(int(winnerID))
-                    desc += winner.name + " "
+                    desc += winner.name + ", "
                     userMoney = DBConnection.fetchUserData("userBalance", winnerID)
                     userMoney += payout
                     DBConnection.updateUserBalance(winnerID, userMoney)
@@ -255,6 +271,135 @@ class TexasHoldEm(Game):
                     import main
                     main.gameList.remove(self)
                     return
+
+    async def startGame(self):
+        self.gameUnderway = True
+        await self.newHand()
+
+
+class President(Game):
+    imageUrl = "https://i.imgur.com/ndAq9w8.png"
+    gameName = "President"
+
+    def __init__(self, channel, ID):
+        super().__init__(channel, ID)
+        self.cardsToBeat = []
+        self.numPasses = 0
+        self.turnIndex = 0
+        self.activePlayers = []
+        self.finished = []
+        self.currentPlayer = None
+
+    def deal(self, user: discord.Member, numCards: int = 1):
+        selectCard = random.choice(self.DECK)
+        self.playerHands[str(user.id)].append(selectCard)
+        self.DECK.remove(selectCard)
+
+    async def gameLoop(self):
+        if len(self.players) == 0 and self.gameUnderway:
+            embed = discord.Embed(title="President", description="No players left in game. This game will now terminate.", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=President.imageUrl)
+            await self.channel.send(embed=embed)
+            import main
+            main.gameList.remove(self)
+            return
+
+        if not self.gameUnderway:
+            return
+
+        if self.turnIndex >= len(self.activePlayers):
+            self.turnIndex = 0
+
+        from main import client
+        self.currentPlayer = client.get_user(int(self.activePlayers[self.turnIndex]))
+
+        if len(self.finished) == len(self.players) - 1:
+            self.endGame()
+
+        if self.gameEnded:
+            embed = discord.Embed(title="President", description="Game finished, showing positions.", color=0x0ff00)
+            embed.set_thumbnail(url=President.imageUrl)
+
+            index = 0
+            for i in range(0, len(self.finished)):
+                index = i
+                if i == 0:
+                    embed.add_field(name="1st Place", value=client.get_user(int(self.finished[i])).name, inline=False)
+                elif i == 1:
+                    embed.add_field(name="2nd Place", value=client.get_user(int(self.finished[i])).name, inline=False)
+                else:
+                    embed.add_field(name=str(i) + "th Place", value=client.get_user(int(self.finished[i])), inline=False)
+
+            embed.add_field(name="Last Place", value=client.get_user(int(self.activePlayers[0])).name, inline=False)
+            embed.add_field(name="Game ID", value=str(self.ID), inline=False)
+            await self.channel.send(embed=embed)
+            import main
+            main.gameList.remove(self)
+            return
+
+    async def newHand(self):
+        self.cardsToBeat = []
+        self.numPasses = 0
+        self.finished = []
+        self.activePlayers = []
+        for ID in self.players:
+            self.playerHands.update({ID: []})
+
+        playerIndex = 0
+        from main import client, sortHand
+        while len(self.DECK) > 0:
+            dealToPlayer = client.get_user(int(self.players[playerIndex]))
+            self.deal(dealToPlayer, 1)
+            playerIndex += 1
+            if playerIndex >= len(self.players):
+                playerIndex = 0
+
+        for ID in self.players:
+            self.playerHands[ID] = sortHand(client.get_user(int(ID)), self.playerHands[ID])
+            self.activePlayers.append(ID)
+
+        embed = discord.Embed(title="President", description="All cards have been dealt.", color=0x0ff00)
+        embed.set_thumbnail(url=President.imageUrl)
+        embed.set_footer(text="Check your hand with %hand.")
+        await self.channel.send(embed=embed)
+
+    async def nextTurn(self):
+        if self.turnIndex >= len(self.activePlayers):
+            self.turnIndex = 0
+
+        from main import client
+        self.currentPlayer = client.get_user(int(self.activePlayers[self.turnIndex]))
+
+        embed = discord.Embed(title="President", description="It is your turn.", color=0x0ff00)
+        embed.set_thumbnail(url=President.imageUrl)
+        embed.set_author(name=self.currentPlayer.name, icon_url=self.currentPlayer.avatar_url)
+
+        if self.numPasses == len(self.activePlayers) - 1:
+            embed.description = "Everyone passed on your cards. You have a free turn!"
+            embed.set_thumbnail(url=President.imageUrl)
+            self.numPasses = 0
+            self.cardsToBeat = []
+
+        playerList = ""
+
+        for playerID in self.activePlayers:
+            playerList += client.get_user(int(playerID)).name + ": " + str(
+                len(self.playerHands[playerID])) + " card(s) left\n"
+
+        embed.add_field(name="Players", value=playerList, inline=False)
+
+        finishedList = ""
+
+        for playerID in self.finished:
+            finishedList += client.get_user(int(playerID)).name + "\n"
+
+        if finishedList != "":
+            embed.add_field(name="Finished", value=finishedList, inline=False)
+
+        embed.add_field(name="Game ID", value=str(self.ID))
+
+        await self.channel.send(embed=embed)
 
     async def startGame(self):
         self.gameUnderway = True

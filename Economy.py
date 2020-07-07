@@ -89,6 +89,11 @@ class Economy(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        if user == ctx.author:
+            embed.description = "Why are you paying yourself?"
+            await ctx.send(embed=embed)
+            return
+
         if amount is None:
             embed.description = "No amount provided."
             await ctx.send(embed=embed)

@@ -365,11 +365,22 @@ class President(Game):
         await self.channel.send(embed=embed)
 
     async def nextTurn(self):
+        if len(self.activePlayers) == 1:
+            return
+
         if self.turnIndex >= len(self.activePlayers):
             self.turnIndex = 0
 
-        from main import client
+        from main import client, showHand
         self.currentPlayer = client.get_user(int(self.activePlayers[self.turnIndex]))
+
+        embed = discord.Embed(title=self.currentPlayer.name + "'s Hand", description=None, color=0x00ff00)
+        embed.set_author(name=self.currentPlayer.display_name, icon_url=self.currentPlayer.avatar_url)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+        file = showHand(self.currentPlayer, self.playerHands[str(self.currentPlayer.id)])
+        embed.set_image(url="attachment://hand.png")
+        embed.add_field(name="Number of Cards", value=str(len(self.playerHands[str(self.currentPlayer.id)])))
+        await self.currentPlayer.send(file=file, embed=embed)
 
         embed = discord.Embed(title="President", description="It is your turn.", color=0x0ff00)
         embed.set_thumbnail(url=President.imageUrl)

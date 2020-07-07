@@ -9,6 +9,11 @@ import discord.ext.commands
 from main import *
 from CardEval import num_pairs, get_pair, hasTriple
 
+def keyByValue(value, d):
+    for key, val in d.items():
+        if val == value:
+            return key
+
 def convertToNumerical(cards):
     cardVals = []
     conversion = {'J': 11, 'Q': 12, 'K': 13, 'A': 14, '2': 15}
@@ -23,61 +28,49 @@ def convertToNumerical(cards):
 
     return cardVals
 
+def evaluatePlay(cards):
+    noneValue = ("None", -1)
+    if len(cards) > 5 or len(cards) == 0:
+        return noneValue
 
-# Return the value of the cards in the pair if they are one, -1 if they are not
-def isPair(cardVals):
-    if len(cardVals) != 2:
-        return -1
+    cards.sort()
+    if len(cards) == 5:
+        if cards[0] == cards[1] - 1 == cards[2] - 2 == cards[3] - 3 == cards[4] - 4:
+            return "Straight", cards[4]
 
-    if cardVals[0] == cardVals[1]:
-        return cardVals[0]
-    return -1
+        occ = {}
+        for card in cards:
+            if card not in occ:
+                occ.update({card: 1})
+            else:
+                occ[card] += 1
 
-# Return the value of the cards in the triple if they are one, -1 if they are not
-def isTriple(cardVals):
-    if len(cardVals) != 3:
-        return -1
+        sortedOcc = list(occ.values())
+        sortedOcc.sort()
+        if sortedOcc == [2, 3]:
+            return "Full House", keyByValue(3, occ)
+        elif sortedOcc == [1, 4]:
+            return "Quad", keyByValue(4, occ)
 
-    if cardVals[0] == cardVals[1] == cardVals[2]:
-        return cardVals[0]
-    return -1
+        return noneValue
 
-# Return the value of the triple in a full house if it exists, -1 if there is no full house
-def isFullHouse(cardVals):
-    if len(cardVals) != 5:
-        return -1
+    if len(cards) == 4:
+        if cards[0] == cards[1] == cards[2] == cards[3]:
+            return "Quad", cards[0]
+        return noneValue
 
-    if hasTriple(cardVals) and num_pairs(cardVals) == 4:
-        value = get_pair(cardVals)
-        cardVals = [v for v in cardVals if v != value]
-        if len(cardVals) == 2:
-            return value
-        else:
-            return cardVals[0]
-    else:
-        return -1
+    if len(cards) == 3:
+        if cards[0] == cards[1] == cards[2]:
+            return "Triple", cards[0]
+        return noneValue
 
-# Return the value of the quad if it exists, -1 if there is no quad
-def isQuad(cardVals):
-    if len(cardVals) != 4 and len(cardVals) != 5:
-        return -1
+    if len(cards) == 2:
+        if cards[0] == cards[1]:
+            return "Pair", cards[0]
+        return noneValue
 
-    cardVals.sort()
-    if cardVals[0] == cardVals[1] == cardVals[2] == cardVals[3] or (len(cardVals) == 5 and cardVals[1] == cardVals[2] == cardVals[3] == cardVals[4]):
-        return cardVals[1]
-    else:
-        return -1
-
-# Return the value of the highest card in the straight if it exists, -1 if it does not
-def isStraight(cardVals):
-    if len(cardVals) != 5:
-        return -1
-
-    cardVals.sort()
-    if cardVals[0] == cardVals[1] - 1 == cardVals[2] - 2 == cardVals[3] - 3 == cardVals[4] - 4:
-        return cardVals[4]
-    else:
-        return -1
+    if len(cards) == 1:
+        return "Single", cards[0]
 
 class Pres(commands.Cog):
     @commands.command(description="Play cards by the index displayed underneath them.",
@@ -134,133 +127,39 @@ class Pres(commands.Cog):
             card = GAME.playerHands[str(ctx.author.id)][arg]
             cardsToPlay.append(card)
 
-        cardVals = convertToNumerical(cardsToPlay)
-        toBeatVals = convertToNumerical(GAME.cardsToBeat)
+        file = None
+        playerPlay = evaluatePlay(convertToNumerical(cardsToPlay))
 
-        if len(toBeatVals) != 0 and len(cardVals) != len(toBeatVals):
-            embed.description = "Invalid card selection."
+        if playerPlay[1] == -1:
+            embed.description = "That is an invalid card combo."
             await ctx.send(embed=embed)
             return
 
-        from main import showHand
-        if len(cardsToPlay) == 1:
-            if len(toBeatVals) == 0 or cardVals[0] > toBeatVals[0]:
-                file = showHand(ctx.author, cardsToPlay)
-                embed.set_image(url="attachment://hand.png")
-                embed.description = "Card played."
-                await ctx.send(file=file, embed=embed)
-            elif cardVals[0] <= toBeatVals[0]:
-                embed.description = "That card isn't high enough."
-                await ctx.send(embed=embed)
-                return
-        elif len(cardsToPlay) == 2:
-            pairVal = isPair(cardVals)
-            if pairVal == -1:
-                embed.description = "That's not a valid pair of cards to play!"
-                await ctx.send(embed=embed)
-                return
-
-            if len(toBeatVals) == 0 or cardVals[0] > toBeatVals[0]:
-                file = showHand(ctx.author, cardsToPlay)
-                embed.set_image(url="attachment://hand.png")
-                embed.description = "Cards played."
-                await ctx.send(file=file, embed=embed)
-            elif cardVals[0] <= toBeatVals[0]:
-                embed.description = "That pair isn't high enough."
-                await ctx.send(embed=embed)
-                return
-        elif len(cardsToPlay) == 3:
-            tripleVal = isTriple(cardVals)
-            if tripleVal == -1:
-                embed.description = "That's not a valid triple to play!"
-                await ctx.send(embed=embed)
-                return
-
-            if len(toBeatVals) == 0 or cardVals[0] > toBeatVals[0]:
-                file = showHand(ctx.author, cardsToPlay)
-                embed.set_image(url="attachment://hand.png")
-                embed.description = "Cards played."
-                await ctx.send(file=file, embed=embed)
-            elif cardVals[0] <= toBeatVals[0]:
-                embed.description = "That triple isn't high enough."
-                await ctx.send(embed=embed)
-                return
-        elif len(cardsToPlay) == 4:
-            quadVal = isQuad(cardVals)
-            if quadVal == -1:
-                embed.description = "That's not a valid quad to play!"
-                await ctx.send(embed=embed)
-                return
-
-            if len(toBeatVals) == 0 or cardVals[0] > toBeatVals[0]:
-                file = showHand(ctx.author, cardsToPlay)
-                embed.set_image(url="attachment://hand.png")
-                embed.description = "Cards played."
-                await ctx.send(file=file, embed=embed)
-            elif cardVals[0] <= toBeatVals[0]:
-                embed.description = "That quad isn't high enough."
-                await ctx.send(embed=embed)
-                return
-        elif len(cardsToPlay) == 5:
-            fullHouseVal = isFullHouse(cardVals)
-            straightVal = isStraight(cardVals)
-
-            if fullHouseVal != -1:
-                toBeatFHVal = isFullHouse(toBeatVals)
-                if len(toBeatVals) == 0:
-                    file = showHand(ctx.author, cardsToPlay)
-                    embed.set_image(url="attachment://hand.png")
-                    embed.description = "Cards played."
-                    await ctx.send(file=file, embed=embed)
-                elif toBeatFHVal == -1:
-                    embed.description = "You can't play a full house on that!"
+        if len(GAME.cardsToBeat) == 0:
+            file = showHand(ctx.author, cardsToPlay)
+            embed.set_image(url="attachment://hand.png")
+        else:
+            toBeatPlay = evaluatePlay(convertToNumerical(GAME.cardsToBeat))
+            if playerPlay[0] == "Quad":
+                if toBeatPlay[0] == "Quad" and playerPlay[1] <= toBeatPlay[1]:
+                    embed.description = "That does not beat the current cards."
                     await ctx.send(embed=embed)
                     return
-                elif fullHouseVal > toBeatFHVal:
-                    file = showHand(ctx.author, cardsToPlay)
-                    embed.set_image(url="attachment://hand.png")
-                    embed.description = "Cards played."
-                    await ctx.send(file=file, embed=embed)
                 else:
-                    embed.description = "That full house is not high enough."
-                    await ctx.send(embed=embed)
-                    return
-            elif straightVal != -1:
-                toBeatSVal = isStraight(toBeatVals)
-                if len(toBeatVals) == 0:
                     file = showHand(ctx.author, cardsToPlay)
                     embed.set_image(url="attachment://hand.png")
-                    embed.description = "Cards played."
-                    await ctx.send(file=file, embed=embed)
-                elif toBeatSVal == -1:
-                    embed.description = "You cannot play a straight on that!"
-                    await ctx.send(embed=embed)
-                    return
-                elif straightVal > toBeatSVal:
-                    file = showHand(ctx.author, cardsToPlay)
-                    embed.set_image(url="attachment://hand.png")
-                    embed.description = "Cards played."
-                    await ctx.send(file=file, embed=embed)
-                else:
-                    embed.description = "That straight is not high enough."
-                    await ctx.send(embed=embed)
-                    return
+            elif playerPlay[0] != toBeatPlay[0]:
+                embed.description = "That is an invalid card combo. You need to pass or play a " + toBeatPlay[0] + "."
+                await ctx.send(embed=embed)
+                return
             else:
-                quadVal = isQuad(cardVals)
-                if quadVal == -1:
-                    embed.description = "That's not a valid combo to play!"
+                if playerPlay[1] <= toBeatPlay[1]:
+                    embed.description = "That does not beat the current cards."
                     await ctx.send(embed=embed)
                     return
-
-                if len(toBeatVals) == 0 or cardVals[0] > toBeatVals[0]:
+                else:
                     file = showHand(ctx.author, cardsToPlay)
                     embed.set_image(url="attachment://hand.png")
-                    embed.description = "Cards played."
-                    await ctx.send(file=file, embed=embed)
-                elif quadVal <= isQuad(toBeatVals):
-                    embed.description = "That quad isn't high enough."
-                    await ctx.send(embed=embed)
-                    return
 
         GAME.cardsToBeat = cardsToPlay
         GAME.turnIndex += 1
@@ -269,12 +168,13 @@ class Pres(commands.Cog):
         for card in cardsToPlay:
             GAME.playerHands[str(ctx.author.id)].remove(card)
 
+        embed.description = "Card(s) played."
         if len(GAME.playerHands[str(ctx.author.id)]) == 0:
-            embed.description = "You finished!"
+            embed.description += "\n\nYou finished!"
             GAME.finished.append(str(ctx.author.id))
             GAME.activePlayers.remove(str(ctx.author.id))
-            await ctx.send(embed=embed)
 
+        await ctx.send(file=file, embed=embed)
         await GAME.nextTurn()
 
     @play.error

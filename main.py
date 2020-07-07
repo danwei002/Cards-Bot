@@ -19,9 +19,11 @@ from discord.ext.tasks import loop
 from PIL import Image, ImageDraw, ImageColor, ImageFont
 from random import randrange
 
+with open('credentials.json') as cred:
+    credentials = json.load(cred)
 
 BOT_PREFIX = "%"
-TOKEN = ""
+TOKEN = credentials["token"]
 
 client = Bot(command_prefix=BOT_PREFIX)
 client.remove_command('help')

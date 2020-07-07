@@ -7,10 +7,10 @@ Current features:
 - Random card generation
 - Some customizability of hand displays
 - Texas Hold 'Em
+- President
 - Betting functionality
 - Basic economy system
 
 Currently working on:
-- President (game)
 - Five-card Draw
 - General refinements to bot

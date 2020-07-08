@@ -36,7 +36,7 @@ class Poker(commands.Cog):
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
-            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            embed.set_footer(text="Use c!join <game ID> to join an existing game.")
             await ctx.send(embed=embed)
             return
 
@@ -59,7 +59,7 @@ class Poker(commands.Cog):
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
@@ -70,7 +70,7 @@ class Poker(commands.Cog):
             return
 
         embed.set_author(name="", icon_url="")
-        embed.set_footer(text="Use %leave to leave this game.")
+        embed.set_footer(text="Use c!leave to leave this game.")
         needToMatch = betCheck(GAME)
         me = client.get_user(716357127739801711)
         file = showHand(ctx.author, GAME.communityCards)
@@ -123,7 +123,7 @@ class Poker(commands.Cog):
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
-            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            embed.set_footer(text="Use c!join <game ID> to join an existing game.")
             await ctx.send(embed=embed)
             return
 
@@ -146,7 +146,7 @@ class Poker(commands.Cog):
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 

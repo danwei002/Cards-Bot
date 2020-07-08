@@ -84,7 +84,7 @@ class Pres(commands.Cog):
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
-            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            embed.set_footer(text="Use c!join <game ID> to join an existing game.")
             await ctx.send(embed=embed)
             return
 
@@ -108,7 +108,7 @@ class Pres(commands.Cog):
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
@@ -180,7 +180,7 @@ class Pres(commands.Cog):
     @play.error
     async def play_error(self, ctx, error):
         if isinstance(error, commands.BadArgument) or isinstance(error, commands.MissingRequiredArgument):
-            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'play'. Check %help play for more details.", color=0x00ff00)
+            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'play'. Check c!help play for more details.", color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             from main import client
             embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
@@ -197,7 +197,7 @@ class Pres(commands.Cog):
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
-            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            embed.set_footer(text="Use c!join <game ID> to join an existing game.")
             await ctx.send(embed=embed)
             return
 
@@ -220,7 +220,7 @@ class Pres(commands.Cog):
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
@@ -250,7 +250,7 @@ class Pres(commands.Cog):
 
         if not checkInGame(ctx.author):
             embed.description = "You are not in any games."
-            embed.set_footer(text="Use %join <game ID> to join an existing game.")
+            embed.set_footer(text="Use c!join <game ID> to join an existing game.")
             await ctx.send(embed=embed)
             return
 
@@ -273,7 +273,7 @@ class Pres(commands.Cog):
         if not GAME.gameUnderway:
             embed.add_field(name="Game ID", value=str(GAME.ID))
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 

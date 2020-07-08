@@ -118,7 +118,7 @@ class TexasHoldEm(Game):
 
         embed = discord.Embed(title="Texas Hold 'Em", description="Starting new hand. Ante is $50", colour=0x00ff00)
         embed.set_thumbnail(url=TexasHoldEm.imageUrl)
-        embed.set_footer(text="Use %leave to leave this game.")
+        embed.set_footer(text="Use c!leave to leave this game.")
         file = showHand(client.get_user(716357127739801711), self.communityCards)
         embed.set_image(url="attachment://hand.png")
 
@@ -212,7 +212,7 @@ class TexasHoldEm(Game):
                 embed.title = "Texas Hold 'Em"
                 embed.description = "The winner is " + winner.name + ", winning the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumps up for yes, thumbs down for no."
                 embed.set_thumbnail(url=winner.avatar_url)
-                embed.set_footer(text="Use %leave to leave this game.")
+                embed.set_footer(text="Use c!leave to leave this game.")
 
                 userMoney = DBConnection.fetchUserData("userBalance", score[overallMax])
                 userMoney += self.pot
@@ -231,7 +231,7 @@ class TexasHoldEm(Game):
                 desc += ", splitting the pot of $" + str(self.pot) + ".\n\nStart next hand? Thumbs up for yes, thumbs down for no."
                 embed.description = desc
                 embed.set_thumbnail(url=TexasHoldEm.imageUrl)
-                embed.set_footer(text="Use %leave to leave this game.")
+                embed.set_footer(text="Use c!leave to leave this game.")
 
             confirmEmoji = '👍'
             quitEmoji = '👎'
@@ -361,7 +361,7 @@ class President(Game):
 
         embed = discord.Embed(title="President", description="All cards have been dealt.", color=0x0ff00)
         embed.set_thumbnail(url=President.imageUrl)
-        embed.set_footer(text="Check your hand with %hand.")
+        embed.set_footer(text="Check your hand with c!hand.")
         await self.channel.send(embed=embed)
 
     async def nextTurn(self):

@@ -22,7 +22,7 @@ from random import randrange
 with open('credentials.json') as cred:
     credentials = json.load(cred)
 
-BOT_PREFIX = "%"
+BOT_PREFIX = "c!"
 TOKEN = credentials["token"]
 
 client = Bot(command_prefix=BOT_PREFIX)
@@ -37,6 +37,25 @@ gameList = []
 
 uncategorized = ['draw', 'game', 'hand',  'join', 'rc', 'setColor', 'setSort', 'start']
 
+# Card generator
+cardChoices = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+suits = ['C', 'D', 'H', 'S']
+
+# Card ordering dictionary
+ORDER = order
+
+# Deck constant
+deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
+        "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
+        "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
+        "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
+        "deck/7D.png", "deck/7C.png", "deck/7H.png", "deck/7S.png", "deck/8D.png", "deck/8C.png", "deck/8H.png",
+        "deck/8S.png", "deck/9D.png", "deck/9C.png", "deck/9H.png", "deck/9S.png",
+        "deck/10D.png", "deck/10C.png", "deck/10H.png",
+        "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
+        "deck/QH.png", "deck/QS.png",
+        "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
+
 def hasCommandByName(name: str):
     for command in client.commands:
         if command.name == name:
@@ -50,7 +69,7 @@ def hasCommandByName(name: str):
 async def __help(ctx, param: str = None):
     if param is None:
         embed = discord.Embed(title="Cards Bot Commands",
-                              description="To view a help page, just add the page number after the %help command. For example: %help 3",
+                              description="To view a help page, just add the page number after the c!help command. For example: c!help 3",
                               color=0x00ff00)
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
         embed.add_field(name="Page 1: Betting",
@@ -69,7 +88,7 @@ async def __help(ctx, param: str = None):
         if int(param) == 1:
             commands = client.get_cog('Betting').get_commands()
             embed.title = "Betting Commands"
-            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            embed.description = "To view a specific command, enter the command's name after the c!help command. For example: c!help rc."
 
             for command in commands:
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
@@ -78,7 +97,7 @@ async def __help(ctx, param: str = None):
         elif int(param) == 2:
             commands = client.get_cog('Economy').get_commands()
             embed.title = "Economy Commands"
-            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            embed.description = "To view a specific command, enter the command's name after the c!help command. For example: c!help rc."
 
             for command in commands:
                 embed.add_field(name=BOT_PREFIX + command.name, value=command.description, inline=False)
@@ -86,13 +105,13 @@ async def __help(ctx, param: str = None):
             await ctx.send(embed=embed)
         elif int(param) == 3:
             embed.title = "Game Commands"
-            embed.description = "To view a help page, just add the page number after the %help command. For example: %help 3."
+            embed.description = "To view a help page, just add the page number after the c!help command. For example: c!help 3."
             embed.add_field(name="Page 5: Texas Hold 'Em", value="Commands for Texas Hold 'Em.", inline=False)
             embed.add_field(name="Page 6: President", value="Commands for President.", inline=False)
             await ctx.send(embed=embed)
         elif int(param) == 4:
             embed.title = "Uncategorized Commands"
-            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            embed.description = "To view a specific command, enter the command's name after the c!help command. For example: c!help rc."
 
             for name in uncategorized:
                 command = hasCommandByName(name)
@@ -101,7 +120,7 @@ async def __help(ctx, param: str = None):
             await ctx.send(embed=embed)
         elif int(param) == 5:
             embed.title = "Texas Hold 'Em Commands"
-            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            embed.description = "To view a specific command, enter the command's name after the c!help command. For example: c!help rc."
             commands = client.get_cog('Poker').get_commands()
 
             for command in commands:
@@ -110,7 +129,7 @@ async def __help(ctx, param: str = None):
             await ctx.send(embed=embed)
         elif int(param) == 6:
             embed.title = "President"
-            embed.description = "To view a specific command, enter the command's name after the %help command. For example: %help rc."
+            embed.description = "To view a specific command, enter the command's name after the c!help command. For example: c!help rc."
             commands = client.get_cog('Pres').get_commands()
 
             for command in commands:
@@ -131,10 +150,6 @@ async def __help(ctx, param: str = None):
 
 @client.event
 async def on_ready():
-    for guild in client.guilds:
-        for member in guild.members:
-            if not DBConnection.checkUserInDB(str(member.id)):
-                DBConnection.addUserToDB(str(member.id))
     gameLoop.start()
     print("Now online.")
 
@@ -167,26 +182,6 @@ def getGame(user: discord.Member):
 # Check if message and game channel match
 def channelCheck(GAME, CHANNEL):
     return GAME.channel == CHANNEL
-
-
-# Card generator
-cardChoices = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-suits = ['C', 'D', 'H', 'S']
-
-# Card ordering dictionary
-ORDER = order
-
-# Deck constant
-deck = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
-        "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
-        "deck/4D.png", "deck/4C.png", "deck/4H.png", "deck/4S.png", "deck/5D.png", "deck/5C.png", "deck/5H.png",
-        "deck/5S.png", "deck/6D.png", "deck/6C.png", "deck/6H.png", "deck/6S.png",
-        "deck/7D.png", "deck/7C.png", "deck/7H.png", "deck/7S.png", "deck/8D.png", "deck/8C.png", "deck/8H.png",
-        "deck/8S.png", "deck/9D.png", "deck/9C.png", "deck/9H.png", "deck/9S.png",
-        "deck/10D.png", "deck/10C.png", "deck/10H.png",
-        "deck/10S.png", "deck/JD.png", "deck/JC.png", "deck/JH.png", "deck/JS.png", "deck/QD.png", "deck/QC.png",
-        "deck/QH.png", "deck/QS.png",
-        "deck/KD.png", "deck/KC.png", "deck/KH.png", "deck/KS.png"]
 
 # Return a discord File object representing the user's hand
 def showHand(user, userHand):
@@ -248,7 +243,7 @@ Commands Start Here
 
 @client.command(description="Generate a random card. Duplicates can appear.",
                 brief="Generate a random card",
-                help="This command generates a random card from the 52-card deck. Format is %rc. No parameters are required.",
+                help="This command generates a random card from the 52-card deck. Format is c!rc. No parameters are required.",
                 pass_context=True)
 async def rc(ctx):
     embed = discord.Embed(title="Random Card", description="", color=0x00ff00)
@@ -285,7 +280,7 @@ async def rc(ctx):
 @client.command(description="Pull a number of random cards from the deck.",
                 brief="Draw a number of cards from the deck",
                 help="Pull a number of specified random cards from the deck.\n"
-                     "Format for this command is %draw <number of cards>.\n Number of cards should be between 1-52 inclusive.",
+                     "Format for this command is c!draw <number of cards>.\n Number of cards should be between 1-52 inclusive.",
                 pass_context=True)
 async def draw(ctx, cards: int = 1):
     embed = discord.Embed(title="Draw Card", description=None, color=0x00ff00)
@@ -321,7 +316,7 @@ async def draw(ctx, cards: int = 1):
 
 @client.command(description="View your hand.",
                 brief="View your hand",
-                help="View the cards you have in your hand. The bot will PM you an image containing your hand. Format is %hand without any parameters.",
+                help="View the cards you have in your hand. The bot will PM you an image containing your hand. Format is c!hand without any parameters.",
                 pass_context=True)
 async def hand(ctx):
     embed = discord.Embed(title=ctx.author.name + "'s Hand", description=None, color=0x00ff00)
@@ -346,7 +341,7 @@ async def hand(ctx):
 @client.command(description="Set sorting type. Use 'p' for president-style sorting (3 low, 2 high), 'd' for default sorting (A low, K high), 's' for suit sorting (diamonds - spades).",
                 brief="Set sorting type",
                 aliases=['ss'],
-                help="Set your preferred hand sorting style. Format for this command is %setSort <sortType>.\nUse 'p' for president-style 3 lowest, 2 highest sorting.\n "
+                help="Set your preferred hand sorting style. Format for this command is c!setSort <sortType>.\nUse 'p' for president-style 3 lowest, 2 highest sorting.\n "
                      "Use 'd' for default ace low, king high sorting.\n Use 's' for sorting by suit.\n",
                 pass_context=True)
 async def setSort(ctx, sortType: str = None):
@@ -385,7 +380,7 @@ async def setSort(ctx, sortType: str = None):
 @client.command(description="Start a game.",
                 brief="Start a game",
                 aliases=['5card'],
-                help="Use this command to start a new game. You can only use this command outside of a game. Format is %game without parameters.",
+                help="Use this command to start a new game. You can only use this command outside of a game. Format is c!game without parameters.",
                 pass_context=True)
 async def game(ctx):
     global gameList
@@ -426,7 +421,7 @@ async def game(ctx):
             gameList.append(GAME)
             embed = discord.Embed(title="Game Creation", description="Texas Hold 'Em game created.", color=0x00ff00)
             embed.add_field(name="Game ID", value=str(ID))
-            embed.add_field(name="Joining", value="%join " + str(ID))
+            embed.add_field(name="Joining", value="c!join " + str(ID))
             embed.set_thumbnail(url=GAME.imageUrl)
             await ctx.send(embed=embed)
         elif str(rxn[0].emoji) == emoji2:
@@ -437,14 +432,14 @@ async def game(ctx):
             gameList.append(GAME)
             embed = discord.Embed(title="Game Creation", description="President game created.", color=0x00ff00)
             embed.add_field(name="Game ID", value=str(ID))
-            embed.add_field(name="Joining", value="%join " + str(ID))
+            embed.add_field(name="Joining", value="c!join " + str(ID))
             embed.set_thumbnail(url=GAME.imageUrl)
             await ctx.send(embed=embed)
 
 
 @client.command(description="Join a game using its 6-digit ID.",
                 brief="Join a game.",
-                help="Join an existing game using its 6-digit ID. Format for this command is %join <6-digit ID>.",
+                help="Join an existing game using its 6-digit ID. Format for this command is c!join <6-digit ID>.",
                 pass_context=True)
 async def join(ctx, ID: int = None):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
@@ -495,7 +490,7 @@ async def join(ctx, ID: int = None):
 
 @client.command(description="Leave a game you are apart of and forfeits any bets made if the game was already underway.",
                 brief="Leave a game you joined and forfeit any bets made if the game was already underway",
-                help="Leave a game you are apart of, thus forfeiting any bets you made already. Format is %leave without any parameters.",
+                help="Leave a game you are apart of, thus forfeiting any bets you made already. Format is c!leave without any parameters.",
                 pass_context=True)
 async def leave(ctx):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
@@ -522,7 +517,7 @@ async def leave(ctx):
 
 @client.command(description="Start the game.",
                 brief="Start the game",
-                help="Start the game you are apart of if it was not already underway. Format is %start without any parameters.",
+                help="Start the game you are apart of if it was not already underway. Format is c!start without any parameters.",
                 pass_context=True)
 async def start(ctx):
     embed = discord.Embed(title=None, description=None, color=0x00ff00)
@@ -557,7 +552,7 @@ async def start(ctx):
 @client.command(description="Set a custom color using a hex code for your hand.",
                 brief="Set a custom color for your hand",
                 aliases=['sc', 'setColour'],
-                help="Set a custom color for the image that displays your hand. A valid color hex code in the format #123ABC is required. Format is %setColor <hex code>.",
+                help="Set a custom color for the image that displays your hand. A valid color hex code in the format #123ABC is required. Format is c!setColor <hex code>.",
                 pass_context=True)
 async def setColor(ctx, colour: str):
     embed = discord.Embed(title="Custom Colour", description=None, color=0x00ff00)
@@ -586,7 +581,16 @@ async def gameLoop():
 
 @client.event
 async def on_message(msg):
-    await client.process_commands(msg)
+    if not DBConnection.checkUserInDB(str(msg.author.id)):
+        DBConnection.addUserToDB(str(msg.author.id))
+
+
+@client.event
+async def on_guild_join(guild):
+    for member in guild.members:
+        if not DBConnection.checkUserInDB(str(member.id)):
+            DBConnection.addUserToDB(str(member.id))
+
 
 client.load_extension('Poker')
 client.load_extension('Economy')

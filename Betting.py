@@ -10,7 +10,7 @@ class Betting(commands.Cog):
     @commands.command(description="Raise your bet.",
                       brief="Raise your bet",
                       name='raise',
-                      help="Raise your bet by a specified amount. Format for this command is %raise <amount>. Requires sufficient balance to use.",
+                      help="Raise your bet by a specified amount. Format for this command is c!raise <amount>. Requires sufficient balance to use.",
                       pass_context=True)
     async def __raise(self, ctx, raiseBy: float = None):
         ID = str(ctx.author.id)
@@ -38,11 +38,11 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
-        embed.set_footer(text="Format is %raise <amount to raise by>.")
+        embed.set_footer(text="Format is c!raise <amount to raise by>.")
         embed.add_field(name="Your Balance", value="$" + str(authorMoney), inline=False)
 
         if GAME.playerStatus[ID] == "Fold":
@@ -78,7 +78,7 @@ class Betting(commands.Cog):
     @__raise.error
     async def raise_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
-            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'raise'. Check %help raise for more details.", color=0x00ff00)
+            embed = discord.Embed(title="Command Error", description="Invalid arguments detected for command 'raise'. Check c!help raise for more details.", color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             from main import client
             embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
@@ -87,7 +87,7 @@ class Betting(commands.Cog):
     @commands.command(description="Call to the highest bet.",
                       brief="Call to the highest bet",
                       name='call',
-                      help="Match the current highest bet. Format is %call. No parameters are needed. Requires sufficient balance to use.",
+                      help="Match the current highest bet. Format is c!call. No parameters are needed. Requires sufficient balance to use.",
                       pass_context=True)
     async def __call(self, ctx):
         ID = str(ctx.author.id)
@@ -114,11 +114,11 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
-        embed.set_footer(text="Format is %raise <amount to raise by>.")
+        embed.set_footer(text="Format is c!raise <amount to raise by>.")
         embed.add_field(name="Your Balance", value="$" + str(authorMoney), inline=False)
 
         if GAME.playerStatus[ID] == "Fold":
@@ -158,7 +158,7 @@ class Betting(commands.Cog):
     @commands.command(description="Forfeit your bet and lay down your hand.",
                       brief="Forfeit your bet",
                       name='fold',
-                      help="Fold and forfeit, taking no further part in the hand. You will lose any amount you already bet. Format is %fold. No parameters are needed.",
+                      help="Fold and forfeit, taking no further part in the hand. You will lose any amount you already bet. Format is c!fold. No parameters are needed.",
                       pass_context=True)
     async def __fold(self, ctx):
         ID = str(ctx.author.id)
@@ -184,7 +184,7 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
@@ -195,7 +195,7 @@ class Betting(commands.Cog):
     @commands.command(description="View the money in the pot.",
                       brief="View the money in the pot",
                       name='pot',
-                      help="See how much money is currently available to be won in the pot. Format is %pot. No parameters are needed.",
+                      help="See how much money is currently available to be won in the pot. Format is c!pot. No parameters are needed.",
                       pass_context=True)
     async def __pot(self, ctx):
         embed = discord.Embed(title="Pot", color=0x00ff00)
@@ -220,7 +220,7 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 
@@ -230,7 +230,7 @@ class Betting(commands.Cog):
     @commands.command(description="Check the current highest bet.",
                       brief="Check the current highest bet",
                       name='highest',
-                      help="Check what the current highest bet is. Format is %highest. No parameters are needed.",
+                      help="Check what the current highest bet is. Format is c!highest. No parameters are needed.",
                       pass_context=True)
     async def __highest(self, ctx):
         embed = discord.Embed(title="Highest Bet", color=0x00ff00)
@@ -255,7 +255,7 @@ class Betting(commands.Cog):
 
         if not GAME.gameUnderway:
             embed.description = "This game has not started."
-            embed.set_footer(text="Use %start to start this game.")
+            embed.set_footer(text="Use c!start to start this game.")
             await ctx.send(embed=embed)
             return
 

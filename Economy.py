@@ -10,7 +10,7 @@ imgUrl = "https://i.imgur.com/ydS4u8P.png"
 class Economy(commands.Cog):
     @commands.command(description="Check user balance.",
                       brief="Check user balance",
-                      help="Check a user's balance. Mention a user to check their balance, or none to check your own. Format is %bal <mention user/none>.",
+                      help="Check a user's balance. Mention a user to check their balance, or none to check your own. Format is c!bal <mention user/none>.",
                       pass_context=True)
     async def bal(self, ctx, user: discord.Member = None):
         if user is None:
@@ -40,7 +40,7 @@ class Economy(commands.Cog):
     @commands.command(description="Set money for user. Requires administrator permissions.",
                       brief="Set money for user",
                       help="Set the balance of a user to a specified value. Requires administrator permissions for use. Mention a user to"
-                           " set their balance. Format is %setbal <mention user> <balance amount>.",
+                           " set their balance. Format is c!setbal <mention user> <balance amount>.",
                       pass_context=True)
     @has_permissions(administrator=True)
     async def setbal(self, ctx, user: discord.Member = None, amount: float = None):
@@ -49,7 +49,7 @@ class Economy(commands.Cog):
         embed.set_thumbnail(url=imgUrl)
 
         if amount is None or user is None:
-            embed.description = "Invalid format for command. Try %setbal <mention user> <amount>."
+            embed.description = "Invalid format for command. Try c!setbal <mention user> <amount>."
             await ctx.send(embed=embed)
             return
 
@@ -62,7 +62,7 @@ class Economy(commands.Cog):
     async def setbal_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             embed = discord.Embed(title="Command Error",
-                                  description="Invalid arguments detected for command 'setbal'. Check %help setbal for more details.",
+                                  description="Invalid arguments detected for command 'setbal'. Check c!help setbal for more details.",
                                   color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             embed.set_thumbnail(url=imgUrl)
@@ -78,7 +78,7 @@ class Economy(commands.Cog):
     @commands.command(description="Pay a user.",
                       brief="Pay a user",
                       help="Pay a user from your own balance. You must have sufficient funds to pay the value you specified. Mention"
-                           " the user who you'd like to pay. Format is %pay <mention user> <payment amount>.",
+                           " the user who you'd like to pay. Format is c!pay <mention user> <payment amount>.",
                       pass_context=True)
     async def pay(self, ctx, user: discord.Member = None, amount: float = None):
         embed = discord.Embed(title="Payment", color=0x00ff00)
@@ -129,7 +129,7 @@ class Economy(commands.Cog):
             embed = discord.Embed(title="Command Error", color=0x00ff00)
             embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             embed.set_thumbnail(url=imgUrl)
-            embed.description = "Invalid arguments detected for command 'pay'. Try %pay <mention user> <amount>."
+            embed.description = "Invalid arguments detected for command 'pay'. Try c!pay <mention user> <amount>."
             await ctx.send(embed=embed)
 
 

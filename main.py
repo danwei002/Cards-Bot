@@ -584,13 +584,14 @@ async def on_message(msg):
     if not DBConnection.checkUserInDB(str(msg.author.id)):
         DBConnection.addUserToDB(str(msg.author.id))
 
+    await client.process_commands(msg)
+
 
 @client.event
 async def on_guild_join(guild):
     for member in guild.members:
         if not DBConnection.checkUserInDB(str(member.id)):
             DBConnection.addUserToDB(str(member.id))
-
 
 client.load_extension('Poker')
 client.load_extension('Economy')

@@ -150,7 +150,6 @@ async def __help(ctx, param: str = None):
 
 @client.event
 async def on_ready():
-    gameLoop.start()
     print("Now online.")
 
 # Check if a user in participating in a game
@@ -178,6 +177,13 @@ def getGame(user: discord.Member):
     for GAME in gameList:
         if GAME.hasPlayer(user):
             return GAME
+
+# Get a Game by channel
+def getGameByChannel(channel):
+    for GAME in gameList:
+        if GAME.channel == channel:
+            return GAME
+    return None
 
 # Check if message and game channel match
 def channelCheck(GAME, CHANNEL):
@@ -384,6 +390,17 @@ async def setSort(ctx, sortType: str = None):
                 pass_context=True)
 async def game(ctx):
     global gameList
+
+    channelGame = getGameByChannel(ctx.channel)
+    if channelGame is not None:
+        embed = discord.Embed(title=None, description="There is already an active game in this channel.", color=0x00ff00)
+        embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
+        embed.add_field(name="Game ID", value=str(channelGame.ID))
+        embed.set_footer(text="Use c!join <game id> to join a game.")
+        await ctx.send(embed=embed)
+        return
+
     if checkInGame(ctx.author):
         embed = discord.Embed(title=None, description="You are already in a game.", color=0x00ff00)
         embed.set_thumbnail(url=client.get_user(716357127739801711).avatar_url)
@@ -418,6 +435,7 @@ async def game(ctx):
             while hasGame(ID):
                 ID = randrange(100000, 1000000)
             GAME = TexasHoldEm(ctx.channel, ID)
+            GAME.gameLoop.start()
             gameList.append(GAME)
             embed = discord.Embed(title="Game Creation", description="Texas Hold 'Em game created.", color=0x00ff00)
             embed.add_field(name="Game ID", value=str(ID))
@@ -429,6 +447,7 @@ async def game(ctx):
             while hasGame(ID):
                 ID = randrange(100000, 1000000)
             GAME = President(ctx.channel, ID)
+            GAME.gameLoop.start()
             gameList.append(GAME)
             embed = discord.Embed(title="Game Creation", description="President game created.", color=0x00ff00)
             embed.add_field(name="Game ID", value=str(ID))
@@ -571,13 +590,6 @@ async def setColor(ctx, colour: str):
     embed.add_field(name="Colour", value="<-----")
 
     await ctx.send(embed=embed)
-
-
-@loop(seconds=1)
-async def gameLoop():
-    for GAME in gameList:
-        await GAME.gameLoop()
-
 
 @client.event
 async def on_message(msg):

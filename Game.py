@@ -7,6 +7,7 @@ import itertools
 from abc import abstractmethod
 from DBConnection import DBConnection
 from CardEval import evaluateHand, handType
+from discord.ext.tasks import loop
 
 DECK_CONST = ["deck/AD.png", "deck/AC.png", "deck/AH.png", "deck/AS.png", "deck/2D.png", "deck/2C.png", "deck/2H.png",
               "deck/2S.png", "deck/3D.png", "deck/3C.png", "deck/3H.png", "deck/3S.png",
@@ -25,8 +26,9 @@ class Game:
 
     def __init__(self, channel, ID):
         self.gameUnderway = False
-        self.channel = channel
         self.gameEnded = False
+        self.channel = channel
+        self.expireTimer = 0
         self.ID = ID
         self.players = []
         self.playerHands = {}
@@ -155,7 +157,24 @@ class TexasHoldEm(Game):
 
         await self.channel.send(file=file, embed=embed)
 
+    @loop(seconds=1)
     async def gameLoop(self):
+        if not self.gameUnderway:
+            self.expireTimer += 1
+
+        if self.expireTimer >= 60:
+            embed = discord.Embed(title="Texas Hold 'Em",
+                                  description="This game did not start in time and will be deleted.", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+            await self.channel.send(embed=embed)
+
+            import main
+            main.gameList.remove(self)
+            self.gameLoop.stop()
+            del self
+            return
+
         self.updateStatus()
         if len(self.players) == 0 and self.gameUnderway:
             embed = discord.Embed(title="Texas Hold 'Em", description="No players left in game. This game will now terminate.", colour=0x00ff00)
@@ -165,6 +184,8 @@ class TexasHoldEm(Game):
 
             import main
             main.gameList.remove(self)
+            self.gameLoop.stop()
+            del self
             return
 
         if len(self.communityCards) == 5:
@@ -260,9 +281,11 @@ class TexasHoldEm(Game):
                 embed.description = "Nobody chose in time. Game terminated."
                 embed.add_field(name="Game ID", value=str(self.ID))
                 await self.channel.send(embed=embed)
+                self.gameLoop.stop()
 
                 import main
                 main.gameList.remove(self)
+                del self
                 return
             else:
                 if str(rxn[0].emoji) == confirmEmoji:
@@ -271,9 +294,11 @@ class TexasHoldEm(Game):
                     embed.description = "Game terminated."
                     embed.add_field(name="Game ID", value=str(self.ID))
                     await self.channel.send(embed=embed)
+                    self.gameLoop.stop()
 
                     import main
                     main.gameList.remove(self)
+                    del self
                     return
 
 class President(Game):
@@ -372,7 +397,24 @@ class President(Game):
         self.gameUnderway = True
         await self.newHand()
 
+    @loop(seconds=1)
     async def gameLoop(self):
+        if not self.gameUnderway:
+            self.expireTimer += 1
+
+        if self.expireTimer >= 60:
+            embed = discord.Embed(title="Texas Hold 'Em",
+                                  description="This game did not start in time and will be deleted.", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=TexasHoldEm.imageUrl)
+            await self.channel.send(embed=embed)
+
+            import main
+            main.gameList.remove(self)
+            self.gameLoop.stop()
+            del self
+            return
+
         if len(self.players) == 0 and self.gameUnderway:
             embed = discord.Embed(title="President",
                                   description="No players left in game. This game will now terminate.", colour=0x00ff00)
@@ -381,6 +423,7 @@ class President(Game):
             await self.channel.send(embed=embed)
             import main
             main.gameList.remove(self)
+            del self
             return
 
         if not self.gameUnderway:
@@ -415,4 +458,6 @@ class President(Game):
             await self.channel.send(embed=embed)
             import main
             main.gameList.remove(self)
+            self.gameLoop.stop()
+            del self
             return

@@ -150,7 +150,7 @@ class Betting(commands.Cog):
 
         DBConnection.updateUserBalance(ID, authorMoney)
 
-        embed.set_field_at(1, name="Your New Balance", value = str(authorMoney), inline=False)
+        embed.set_field_at(1, name="Your New Balance", value ="$" + str(authorMoney), inline=False)
         embed.add_field(name="Pot", value="$" + str(GAME.pot))
         embed.description = "You matched the highest bet of $" + str(GAME.maxBet) + "."
         await ctx.send(embed=embed)

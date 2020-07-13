@@ -9,7 +9,7 @@ Current features:
 - Random card drawing
 - Random card generation
 - Some customizability of hand displays
-- Texas Hold 'Em <img src="https://i.imgur.com/1DDTG0z.png"></img>
+- Texas Hold 'Em
 - President
 - Betting functionality
 - Basic economy system

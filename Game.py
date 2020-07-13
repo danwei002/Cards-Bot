@@ -157,7 +157,6 @@ class TexasHoldEm(Game):
 
         await self.channel.send(file=file, embed=embed)
 
-    @loop(seconds=1)
     async def gameLoop(self):
         if not self.gameUnderway:
             self.expireTimer += 1
@@ -171,7 +170,6 @@ class TexasHoldEm(Game):
 
             import main
             main.gameList.remove(self)
-            self.gameLoop.stop()
             del self
             return
 
@@ -184,7 +182,6 @@ class TexasHoldEm(Game):
 
             import main
             main.gameList.remove(self)
-            self.gameLoop.stop()
             del self
             return
 
@@ -281,7 +278,6 @@ class TexasHoldEm(Game):
                 embed.description = "Nobody chose in time. Game terminated."
                 embed.add_field(name="Game ID", value=str(self.ID))
                 await self.channel.send(embed=embed)
-                self.gameLoop.stop()
 
                 import main
                 main.gameList.remove(self)
@@ -294,7 +290,6 @@ class TexasHoldEm(Game):
                     embed.description = "Game terminated."
                     embed.add_field(name="Game ID", value=str(self.ID))
                     await self.channel.send(embed=embed)
-                    self.gameLoop.stop()
 
                     import main
                     main.gameList.remove(self)
@@ -397,13 +392,12 @@ class President(Game):
         self.gameUnderway = True
         await self.newHand()
 
-    @loop(seconds=1)
     async def gameLoop(self):
         if not self.gameUnderway:
             self.expireTimer += 1
 
         if self.expireTimer >= 60:
-            embed = discord.Embed(title="Texas Hold 'Em",
+            embed = discord.Embed(title="President",
                                   description="This game did not start in time and will be deleted.", colour=0x00ff00)
             embed.add_field(name="Game ID", value=str(self.ID))
             embed.set_thumbnail(url=TexasHoldEm.imageUrl)
@@ -411,7 +405,6 @@ class President(Game):
 
             import main
             main.gameList.remove(self)
-            self.gameLoop.stop()
             del self
             return
 
@@ -458,6 +451,5 @@ class President(Game):
             await self.channel.send(embed=embed)
             import main
             main.gameList.remove(self)
-            self.gameLoop.stop()
             del self
             return

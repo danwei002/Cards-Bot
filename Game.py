@@ -64,7 +64,6 @@ class Game:
     async def gameLoop(self):
         return
 
-
 class TexasHoldEm(Game):
     imageUrl = "https://i.imgur.com/1DDTG0z.png"
     gameName = "Texas Hold 'Em"
@@ -97,6 +96,10 @@ class TexasHoldEm(Game):
                 self.playerStatus[ID] = "Called"
             else:
                 self.playerStatus[ID] = "Active"
+
+    async def startGame(self):
+        self.gameUnderway = True
+        await self.newHand()
 
     async def newHand(self):
         from main import client, showHand
@@ -159,6 +162,7 @@ class TexasHoldEm(Game):
             embed.add_field(name="Game ID", value=str(self.ID))
             embed.set_thumbnail(url=TexasHoldEm.imageUrl)
             await self.channel.send(embed=embed)
+
             import main
             main.gameList.remove(self)
             return
@@ -272,11 +276,6 @@ class TexasHoldEm(Game):
                     main.gameList.remove(self)
                     return
 
-    async def startGame(self):
-        self.gameUnderway = True
-        await self.newHand()
-
-
 class President(Game):
     imageUrl = "https://i.imgur.com/ndAq9w8.png"
     gameName = "President"
@@ -294,49 +293,6 @@ class President(Game):
         selectCard = random.choice(self.DECK)
         self.playerHands[str(user.id)].append(selectCard)
         self.DECK.remove(selectCard)
-
-    async def gameLoop(self):
-        if len(self.players) == 0 and self.gameUnderway:
-            embed = discord.Embed(title="President", description="No players left in game. This game will now terminate.", colour=0x00ff00)
-            embed.add_field(name="Game ID", value=str(self.ID))
-            embed.set_thumbnail(url=President.imageUrl)
-            await self.channel.send(embed=embed)
-            import main
-            main.gameList.remove(self)
-            return
-
-        if not self.gameUnderway:
-            return
-
-        if self.turnIndex >= len(self.activePlayers):
-            self.turnIndex = 0
-
-        from main import client
-        self.currentPlayer = client.get_user(int(self.activePlayers[self.turnIndex]))
-
-        if len(self.finished) == len(self.players) - 1:
-            self.endGame()
-
-        if self.gameEnded:
-            embed = discord.Embed(title="President", description="Game finished, showing positions.", color=0x0ff00)
-            embed.set_thumbnail(url=President.imageUrl)
-
-            index = 0
-            for i in range(0, len(self.finished)):
-                index = i
-                if i == 0:
-                    embed.add_field(name="1st Place", value=client.get_user(int(self.finished[i])).name, inline=False)
-                elif i == 1:
-                    embed.add_field(name="2nd Place", value=client.get_user(int(self.finished[i])).name, inline=False)
-                else:
-                    embed.add_field(name=str(i) + "th Place", value=client.get_user(int(self.finished[i])), inline=False)
-
-            embed.add_field(name="Last Place", value=client.get_user(int(self.activePlayers[0])).name, inline=False)
-            embed.add_field(name="Game ID", value=str(self.ID), inline=False)
-            await self.channel.send(embed=embed)
-            import main
-            main.gameList.remove(self)
-            return
 
     async def newHand(self):
         self.cardsToBeat = []
@@ -415,3 +371,48 @@ class President(Game):
     async def startGame(self):
         self.gameUnderway = True
         await self.newHand()
+
+    async def gameLoop(self):
+        if len(self.players) == 0 and self.gameUnderway:
+            embed = discord.Embed(title="President",
+                                  description="No players left in game. This game will now terminate.", colour=0x00ff00)
+            embed.add_field(name="Game ID", value=str(self.ID))
+            embed.set_thumbnail(url=President.imageUrl)
+            await self.channel.send(embed=embed)
+            import main
+            main.gameList.remove(self)
+            return
+
+        if not self.gameUnderway:
+            return
+
+        if self.turnIndex >= len(self.activePlayers):
+            self.turnIndex = 0
+
+        from main import client
+        self.currentPlayer = client.get_user(int(self.activePlayers[self.turnIndex]))
+
+        if len(self.finished) == len(self.players) - 1:
+            self.endGame()
+
+        if self.gameEnded:
+            embed = discord.Embed(title="President", description="Game finished, showing positions.", color=0x0ff00)
+            embed.set_thumbnail(url=President.imageUrl)
+
+            for i in range(0, len(self.finished)):
+                if i == 0:
+                    embed.add_field(name="1st Place", value=client.get_user(int(self.finished[i])).name, inline=False)
+                elif i == 1:
+                    embed.add_field(name="2nd Place", value=client.get_user(int(self.finished[i])).name, inline=False)
+                elif i == 2:
+                    embed.add_field(name="3rd Place", value=client.get_user(int(self.finished[i])).name, inline=False)
+                else:
+                    embed.add_field(name=str(i + 1) + "th Place", value=client.get_user(int(self.finished[i])),
+                                    inline=False)
+
+            embed.add_field(name="Last Place", value=client.get_user(int(self.activePlayers[0])).name, inline=False)
+            embed.add_field(name="Game ID", value=str(self.ID), inline=False)
+            await self.channel.send(embed=embed)
+            import main
+            main.gameList.remove(self)
+            return

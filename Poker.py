@@ -69,6 +69,9 @@ class Poker(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        if len(GAME.communityCards) >= 5:
+            return
+
         embed.set_author(name="", icon_url="")
         embed.set_footer(text="Use c!leave to leave this game.")
         needToMatch = betCheck(GAME)

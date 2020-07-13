@@ -1,5 +1,5 @@
 # Discord Playing Cards Bot
-<img src="https://cdn.discordapp.com/avatars/716357127739801711/322206f9932c58a6f7df516b31a5bd35.webp?size=128">
+<img src="https://cdn.discordapp.com/avatars/716357127739801711/322206f9932c58a6f7df516b31a5bd35.webp?size=128" alt="Cards Bot PFP"></img>
 This is a discord bot I am working on that will support numerous types of playing card games, such as Texas Hold 'Em, President, etc. Data is stored and accessed using a MySQL database. This bot is written in Python using the discord.py library found <a href="https://discordpy.readthedocs.io/en/latest/"> here</a>.
 <br>
 <br>

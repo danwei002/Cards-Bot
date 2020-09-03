@@ -20,8 +20,10 @@ Currently working on:
 
 ## Games
 ![Image of Texas Hold 'Em](https://i.imgur.com/iEKSKiu.png) 
+<br>
 Texas Hold 'Em being played.
 <br>
 
 ![Image of President](https://i.imgur.com/uCUnCXW.png) 
+<br>
 President being played.

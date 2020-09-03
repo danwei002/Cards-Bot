@@ -19,5 +19,9 @@ Currently working on:
 - General refinements to bot
 
 ## Games
-![Image of Texas Hold 'Em](https://i.imgur.com/iEKSKiu.png) Texas Hold 'Em being played.
-![Image of President](https://i.imgur.com/uCUnCXW.png) President being played.
+![Image of Texas Hold 'Em](https://i.imgur.com/iEKSKiu.png) 
+Texas Hold 'Em being played.
+<br>
+
+![Image of President](https://i.imgur.com/uCUnCXW.png) 
+President being played.

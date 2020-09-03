@@ -17,3 +17,6 @@ Current features:
 Currently working on:
 - Five-card Draw
 - General refinements to bot
+
+## Games
+[Image of Texas Hold 'Em](https://i.imgur.com/iEKSKiu.png)
